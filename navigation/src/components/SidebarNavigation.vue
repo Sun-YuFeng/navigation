@@ -1,28 +1,77 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import { supabase } from '../supabase.js'
+import ProfileEditCard from './ProfileEditCard.vue'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 // 导航分类数据
 const categories = ref([
-  { id: 1, name: '首页', icon: 'uil-home' },
-  { id: 2, name: '发现', icon: 'uil-compass' },
-  { id: 3, name: '收藏', icon: 'uil-star' },
-  { id: 4, name: '历史', icon: 'uil-history' },
-  { id: 5, name: '下载', icon: 'uil-download-alt' }
+  { id: 1, name: '首页', icon: 'uil-home', route: '/' },
+  { id: 2, name: '天气', icon: 'uil-sun', route: '/weather' },
+  { id: 3, name: '时钟', icon: 'uil-clock', route: '/clock' },
+  { id: 4, name: '发现', icon: 'uil-compass', route: '/discover' },
+  { id: 5, name: '收藏', icon: 'uil-star', route: '/favorites' },
+  { id: 6, name: '历史', icon: 'uil-history', route: '/history' },
+  { id: 7, name: '下载', icon: 'uil-download-alt', route: '/downloads' }
 ])
 
-// 用户头像（默认使用SVG圆形头像）
+// 用户头像
 const userAvatar = ref('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwMDdiZmYiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNCIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE2IDI0QzIwIDI0IDI0IDIyIDI0IDE4SDBDMC4wMDEgMjIgNCAyNCAxNiAyNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==')
 
-// 处理头像上传
-const handleAvatarUpload = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      userAvatar.value = e.target.result
+// 控制个人资料卡片显示
+const showProfileCard = ref(false)
+
+// 加载用户头像
+const loadUserAvatar = async () => {
+  if (authStore.user?.id) {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('avatar_url')
+        .eq('id', authStore.user.id)
+        .single()
+      
+      if (!error && data?.avatar_url) {
+        userAvatar.value = data.avatar_url
+      }
+    } catch (error) {
+      console.error('加载用户头像失败:', error)
     }
-    reader.readAsDataURL(file)
   }
+}
+
+// 监听个人资料卡片关闭，重新加载头像
+watch(showProfileCard, (newVal) => {
+  if (!newVal) {
+    // 卡片关闭后重新加载头像
+    setTimeout(() => {
+      loadUserAvatar()
+    }, 500)
+  }
+})
+
+// 初始化时加载头像
+onMounted(() => {
+  loadUserAvatar()
+})
+
+// 打开个人资料卡片
+const openProfileCard = () => {
+  showProfileCard.value = true
+}
+
+// 打开设置页面
+const openSettings = () => {
+  router.push('/settings')
+}
+
+// 导航到指定页面
+const navigateTo = (route) => {
+  router.push(route)
 }
 </script>
 
@@ -35,6 +84,7 @@ const handleAvatarUpload = (event) => {
         v-for="category in categories" 
         :key="category.id" 
         class="nav-item"
+        @click="navigateTo(category.route)"
       >
         <i :class="['uil', category.icon]"></i>
         <span class="tooltip">{{ category.name }}</span>
@@ -44,26 +94,23 @@ const handleAvatarUpload = (event) => {
     <!-- 底部区域 -->
     <div class="bottom-section">
       <!-- 用户头像 -->
-      <div class="nav-item avatar-item">
+      <div class="nav-item avatar-item" @click="openProfileCard">
         <div class="avatar-container">
           <img :src="userAvatar" alt="用户头像" class="avatar" />
-          <input 
-            type="file" 
-            accept="image/*" 
-            @change="handleAvatarUpload" 
-            class="avatar-upload"
-          />
         </div>
         <span class="tooltip">个人资料</span>
       </div>
 
       <!-- 设置图标 -->
-      <div class="nav-item">
+      <div class="nav-item" @click="openSettings">
         <i class="uil uil-cog"></i>
         <span class="tooltip">设置</span>
       </div>
     </div>
   </nav>
+
+  <!-- 个人资料编辑卡片 -->
+  <ProfileEditCard v-model:show="showProfileCard" />
 </template>
 
 <style scoped>
@@ -145,15 +192,7 @@ const handleAvatarUpload = (event) => {
   margin: 0 auto;
 }
 
-.avatar-upload {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
+
 
 .tooltip {
   position: absolute;

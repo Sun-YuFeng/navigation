@@ -4,6 +4,7 @@ import LoginView from '../views/Login.vue'
 import SettingsView from '../views/Settings.vue'
 import CommunityView from '../views/Community.vue'
 import CategoryDetailView from '../views/CategoryDetail.vue'
+import ClassifyView from '../views/Classify.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -35,6 +36,12 @@ const router = createRouter({
       path: '/category/:id',
       name: 'category',
       component: CategoryDetailView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/classify',
+      name: 'classify',
+      component: ClassifyView,
       meta: { requiresAuth: true }
     },
   ],

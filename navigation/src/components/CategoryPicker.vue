@@ -6,7 +6,7 @@
     <!-- 气泡内容 -->
     <div class="speech-bubble" @click.stop>
       <div class="bubble-header">
-        <span class="bubble-title">选择分类</span>
+        <span class="bubble-title">选择创建分类</span>
         <button class="bubble-close-btn" @click="closePicker">
           <i class="uil uil-times"></i>
         </button>

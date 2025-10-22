@@ -13,6 +13,7 @@ const authStore = useAuthStore()
 const fixedCategories = ref([
   { id: 1, name: '首页', icon: 'uil-home', route: '/' },
   { id: 2, name: '社区', icon: 'uil-users-alt', route: '/community' },
+  { id: 3, name: '媒体', icon: 'uil-play-circle', route: '/classify' },
 ])
 
 // 用户自定义分类

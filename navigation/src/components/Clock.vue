@@ -60,22 +60,25 @@
 
     <!-- 模拟时钟 -->
     <div v-else class="analog-clock">
-      <div class="clock-face">
-        <div class="clock-center"></div>
-        <!-- 时钟刻度 -->
-        <div v-for="i in 12" :key="i" class="hour-mark" :style="getHourMarkStyle(i)"></div>
-        <!-- 时针 -->
-        <div class="hand hour-hand" :style="getHourHandStyle()"></div>
-        <!-- 分针 -->
-        <div class="hand minute-hand" :style="getMinuteHandStyle()"></div>
-        <!-- 秒针 -->
-        <div class="hand second-hand" :style="getSecondHandStyle()"></div>
-      </div>
-      
-      <!-- 时钟信息 -->
-      <div class="clock-info">
-        <div class="analog-time">{{ formattedTime }}</div>
-        <div class="analog-date">{{ formattedDate }}</div>
+      <div class="analog-clock-container">
+        <!-- 机械时钟 -->
+        <div class="clock-face">
+          <div class="clock-center"></div>
+          <!-- 时钟刻度 -->
+          <div v-for="i in 12" :key="i" class="hour-mark" :style="getHourMarkStyle(i)"></div>
+          <!-- 时针 -->
+          <div class="hand hour-hand" :style="getHourHandStyle()"></div>
+          <!-- 分针 -->
+          <div class="hand minute-hand" :style="getMinuteHandStyle()"></div>
+          <!-- 秒针 -->
+          <div class="hand second-hand" :style="getSecondHandStyle()"></div>
+        </div>
+        
+        <!-- 时间数字显示 -->
+        <div class="time-display-below">
+          <div class="digital-time">{{ formattedTime }}</div>
+          <div class="digital-date">{{ formattedDate }}</div>
+        </div>
       </div>
     </div>
 
@@ -459,9 +462,18 @@ onUnmounted(() => {
 /* 模拟时钟样式 */
 .analog-clock {
   display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.analog-clock-container {
+  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 30px;
+  max-width: 600px;
+  width: 100%;
 }
 
 .clock-face {

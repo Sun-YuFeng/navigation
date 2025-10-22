@@ -4,20 +4,64 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { supabase } from '../supabase.js'
 import ProfileEditCard from './ProfileEditCard.vue'
+import CategoryPicker from './CategoryPicker.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-// 导航分类数据
-const categories = ref([
+// 固定分类数据
+const fixedCategories = ref([
   { id: 1, name: '首页', icon: 'uil-home', route: '/' },
-  { id: 2, name: '天气', icon: 'uil-sun', route: '/weather' },
-  { id: 3, name: '时钟', icon: 'uil-clock', route: '/clock' },
-  { id: 4, name: '发现', icon: 'uil-compass', route: '/discover' },
-  { id: 5, name: '收藏', icon: 'uil-star', route: '/favorites' },
-  { id: 6, name: '历史', icon: 'uil-history', route: '/history' },
-  { id: 7, name: '下载', icon: 'uil-download-alt', route: '/downloads' }
+  { id: 2, name: '社区', icon: 'uil-users-alt', route: '/community' },
 ])
+
+// 用户自定义分类
+const userCategories = ref([])
+
+// 分类选择器引用
+const categoryPickerRef = ref(null)
+
+// 加载用户自定义分类
+const loadUserCategories = async () => {
+  if (authStore.user?.id) {
+    try {
+      const { data, error } = await supabase
+        .from('user_categories')
+        .select('*')
+        .eq('user_id', authStore.user.id)
+        .order('sort_order')
+      
+      if (!error) {
+        userCategories.value = data.map(category => ({
+          ...category,
+          route: `/category/${category.id}`
+        }))
+      }
+    } catch (error) {
+      console.error('加载用户分类失败:', error)
+    }
+  }
+}
+
+// 添加分类的函数
+const addCategory = (event) => {
+  if (categoryPickerRef.value) {
+    // 获取加号按钮的位置
+    const buttonRect = event.currentTarget.getBoundingClientRect()
+    categoryPickerRef.value.openPicker(buttonRect)
+  }
+}
+
+// 处理分类添加事件
+const handleCategoryAdded = (category) => {
+  // 重新加载用户分类
+  loadUserCategories()
+}
+
+// 初始化时加载用户分类
+onMounted(() => {
+  loadUserCategories()
+})
 
 // 用户头像
 const userAvatar = ref('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwMDdiZmYiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNCIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE2IDI0QzIwIDI0IDI0IDIyIDI0IDE4SDBDMC4wMDEgMjIgNCAyNCAxNiAyNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==')
@@ -78,16 +122,41 @@ const navigateTo = (route) => {
 <template>
   <!-- 左侧导航条 -->
   <nav class="sidebar">
-    <!-- 分类区域 - 垂直居中 -->
-    <div class="categories-section">
+    <!-- 顶部区域 - 固定分类 -->
+    <div class="top-section">
       <div 
-        v-for="category in categories" 
+        v-for="category in fixedCategories" 
         :key="category.id" 
         class="nav-item"
         @click="navigateTo(category.route)"
       >
         <i :class="['uil', category.icon]"></i>
         <span class="tooltip">{{ category.name }}</span>
+      </div>
+    </div>
+
+    <!-- 用户自定义分类区域 -->
+    <div class="user-categories-section" v-if="userCategories.length > 0">
+      <div 
+        v-for="category in userCategories" 
+        :key="category.id" 
+        class="nav-item user-category-item"
+        @click="navigateTo(category.route)"
+      >
+        <div class="category-icon" :style="{ backgroundColor: category.color }">
+          <i :class="['uil', category.icon]"></i>
+        </div>
+        <span class="tooltip">{{ category.name }}</span>
+      </div>
+    </div>
+
+    <!-- 中间区域 - 添加分类按钮 -->
+    <div class="middle-section">
+      <div class="nav-item add-category-item" @click="addCategory($event)">
+        <div class="add-icon-container">
+          <i class="uil uil-plus"></i>
+        </div>
+        <span class="tooltip">添加分类</span>
       </div>
     </div>
 
@@ -111,6 +180,9 @@ const navigateTo = (route) => {
 
   <!-- 个人资料编辑卡片 -->
   <ProfileEditCard v-model:show="showProfileCard" />
+  
+  <!-- 分类选择器 -->
+  <CategoryPicker ref="categoryPickerRef" @categoryAdded="handleCategoryAdded" />
 </template>
 
 <style scoped>
@@ -127,20 +199,39 @@ const navigateTo = (route) => {
   top: 0;
   height: 100vh;
   z-index: 1000;
+  justify-content: space-between;
 }
 
-.categories-section {
+.top-section {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  margin-top: 20px;
+}
+
+.user-categories-section {
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 15px;
+  overflow-y: auto;
+  max-height: calc(100vh - 300px);
+  margin: 10px 0;
+}
+
+.middle-section {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  gap: 25px;
+  align-items: center;
+  margin: 10px 0;
 }
 
 .bottom-section {
   display: flex;
   flex-direction: column;
   gap: 25px;
+  margin-top: auto;
 }
 
 .nav-item {
@@ -190,6 +281,59 @@ const navigateTo = (route) => {
   border: 2px solid #3498db;
   display: block;
   margin: 0 auto;
+}
+
+.add-category-item {
+  position: relative;
+}
+
+.add-icon-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #2c3e50;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+.add-category-item:hover .add-icon-container {
+  background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+  transform: scale(1.1);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.add-category-item .uil-plus {
+  font-size: 18px;
+  color: white;
+  font-weight: bold;
+}
+
+.user-category-item {
+  position: relative;
+}
+
+.user-category-item .category-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.user-category-item .category-icon i {
+  font-size: 16px;
+  color: white;
+}
+
+.user-category-item:hover .category-icon {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 

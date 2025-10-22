@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import SidebarNavigation from '../components/SidebarNavigation.vue'
 import Clock from '../components/Clock.vue'
 import Calendar from '../components/Calendar.vue'
@@ -10,16 +10,39 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { ref, onMounted, computed } from 'vue'
 
+// 类型定义
+interface GridItem {
+  id: string
+  type: 'widget' | 'empty'
+  name?: string
+  icon?: string
+  gridColumn: number
+  gridRow: number
+  gradient?: string
+  preview?: (() => string) | string | null
+  previewType?: 'time' | 'date' | 'temp' | 'count' | null
+}
+
+interface Website {
+  name: string
+  url: string
+}
+
+interface UserProfile {
+  displayName?: string
+  username?: string
+}
+
 const router = useRouter()
 const authStore = useAuthStore()
-const userProfile = ref(null)
-const searchKeyword = ref('')
+const userProfile = ref<UserProfile | null>(null)
+const searchKeyword = ref<string>('')
 
 // 模态框控制
-const activeModal = ref(null)
+const activeModal = ref<string | null>(null)
 
 // 文件夹初始数据
-const folderWebsites = ref([
+const folderWebsites = ref<Website[]>([
   {
     name: '腾讯视频',
     url: 'https://v.qq.com'
@@ -39,7 +62,7 @@ const folderWebsites = ref([
 ])
 
 // 网格项配置（数据驱动）
-const gridItems = ref([
+const gridItems = ref<GridItem[]>([
   // 时钟
   {
     id: 'clock',
@@ -61,7 +84,7 @@ const gridItems = ref([
     gridColumn: 2,
     gridRow: 1,
     gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    preview: () => new Date().getDate(),
+    preview: () => new Date().getDate().toString(),
     previewType: 'date'
   },
   // 天气
@@ -106,11 +129,38 @@ const gridItems = ref([
     gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
     preview: () => `${folderWebsites.value.length} 个网站`,
     previewType: 'count'
+  },
+  // 新文件夹
+  {
+    id: 'folder2',
+    type: 'widget',
+    name: '工作资料',
+    icon: 'uil-folder',
+    gridColumn: 2,
+    gridRow: 2,
+    gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+    preview: () => '0 个文件',
+    previewType: 'count'
+  },
+  // AI组件卡片
+  {
+    id: 'ai',
+    type: 'widget',
+    name: 'AI助手',
+    icon: 'uil-robot',
+    gridColumn: 2,
+    gridRow: 2,
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    preview: () => '智能助手',
+    previewType: null
   }
 ])
 
-// 生成剩余空白格子
-for (let i = 2; i <= 24; i++) {
+// 生成剩余空白格子（限制为4行，总共40个格子）
+const totalGridItems = 23 // 4行 × 10列
+const existingItems = gridItems.value.length
+// 确保不会超过40个格子
+for (let i = existingItems + 1; i <= totalGridItems; i++) {
   gridItems.value.push({
     id: `empty-${i}`,
     type: 'empty',
@@ -118,10 +168,30 @@ for (let i = 2; i <= 24; i++) {
     gridRow: 1
   })
 }
+// 如果gridItems超过40个，截断到40个
+if (gridItems.value.length > totalGridItems) {
+  gridItems.value = gridItems.value.slice(0, totalGridItems)
+}
 
 // 拖拽配置
 const drag = ref(false)
 const isDragging = ref(false)
+
+// TypeScript拖拽算法
+let dragStartIndex: number = -1
+
+// 网格位置计算
+const getGridPosition = (index: number): { col: number; row: number } => {
+  const gridColumns = 10
+  const row = Math.floor(index / gridColumns) + 1
+  const col = (index % gridColumns) + 1
+  return { col, row }
+}
+
+// 拖拽结束后优化布局（移除，保持原有布局）
+const optimizeLayoutAfterDrag = (): void => {
+  // 不再重新排序，保持拖拽后的布局
+}
 
 const handleBaiduSearch = () => {
   if (searchKeyword.value.trim()) {
@@ -179,26 +249,37 @@ const loadLayout = () => {
 }
 
 // 拖拽开始
-const onDragStart = () => {
+const onDragStart = (evt: { oldIndex: number }) => {
   drag.value = true
   isDragging.value = true
+  dragStartIndex = evt.oldIndex
 }
 
-// 拖拽结束时保存布局
+// 拖拽变化事件
+const onDragChange = (evt: { moved?: { oldIndex: number, newIndex: number } }) => {
+  if (evt.moved) {
+    // 使用vuedraggable内置的动画，这里不需要额外处理
+    // 动画由vuedraggable的animation属性控制
+  }
+}
+
+// 拖拽结束时保存布局并优化布局
 const onDragEnd = () => {
   drag.value = false
+  
+  // 拖拽结束后优化布局
+  optimizeLayoutAfterDrag()
+  
   saveLayout()
+  
   // 延迟重置isDragging，防止点击事件触发
   setTimeout(() => {
     isDragging.value = false
+    dragStartIndex = -1
   }, 100)
 }
 
-// 重置布局
-const resetLayout = () => {
-  localStorage.removeItem('dashboardLayout')
-  location.reload()
-}
+
 
 onMounted(() => {
   userProfile.value = authStore.user
@@ -228,13 +309,6 @@ onMounted(() => {
             class="search-input"
           />
         </form>
-        <div class="drag-hint">
-          <i class="uil uil-draggabledots"></i>
-          <span>拖拽卡片可以重新排列位置</span>
-          <button @click="resetLayout" class="reset-btn" title="重置布局">
-            <i class="uil uil-redo"></i>
-          </button>
-        </div>
       </div>
 
       <!-- 网格区域 -->
@@ -242,7 +316,7 @@ onMounted(() => {
         v-model="gridItems" 
         class="grid-container"
         item-key="id"
-        :animation="300"
+        :animation="400"
         :easing="'cubic-bezier(0.4, 0.0, 0.2, 1)'"
         ghost-class="ghost"
         chosen-class="chosen"
@@ -251,10 +325,15 @@ onMounted(() => {
         :fallback-tolerance="3"
         :scroll-sensitivity="100"
         :bubble-scroll="true"
+        :invert-swap="true"
+        :swap-threshold="0.5"
+        :direction="'horizontal'"
+        :group="{ name: 'grid', pull: true, put: true }"
         @start="onDragStart"
+        @change="onDragChange"
         @end="onDragEnd"
       >
-        <template #item="{ element }">
+        <template #item="{ element, index }">
           <div
             :class="[
               'grid-item',
@@ -268,6 +347,7 @@ onMounted(() => {
               aspectRatio: element.type === 'empty' ? '1 / 1' : `${element.gridColumn} / ${element.gridRow}`
             }"
             @click="element.type === 'widget' ? openModal(element.id) : null"
+            :data-index="index"
           >
             <!-- 小部件内容 -->
             <template v-if="element.type === 'widget'">
@@ -342,6 +422,29 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- 模态框 - 新文件夹 -->
+      <div v-if="activeModal === 'folder2'" class="modal-overlay" @click="closeModal">
+        <div class="modal-content modal-folder" @click.stop>
+          <button class="modal-close" @click="closeModal">
+            <i class="uil uil-times"></i>
+          </button>
+          <Folder folder-name="工作资料" :initial-websites="[]" />
+        </div>
+      </div>
+
+      <!-- 模态框 - AI组件 -->
+      <div v-if="activeModal === 'ai'" class="modal-overlay" @click="closeModal">
+        <div class="modal-content" @click.stop>
+          <button class="modal-close" @click="closeModal">
+            <i class="uil uil-times"></i>
+          </button>
+          <div class="ai-content">
+            <h2>AI助手</h2>
+            <p>AI助手功能正在开发中...</p>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -363,7 +466,7 @@ onMounted(() => {
 /* 问候语样式 */
 .greeting-section {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .greeting-section h1 {
@@ -381,7 +484,7 @@ onMounted(() => {
 
 /* 搜索框样式 */
 .search-section {
-  margin-bottom: 40px;
+  margin-bottom: 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -415,77 +518,31 @@ onMounted(() => {
   font-weight: 400;
 }
 
-.drag-hint {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  border-radius: 20px;
-  color: #667eea;
-  font-size: 0.9rem;
-  font-weight: 500;
-  animation: fadeInUp 0.5s ease;
-}
 
-.drag-hint i {
-  font-size: 1.2rem;
-}
 
-.reset-btn {
-  background: rgba(102, 126, 234, 0.2);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #667eea;
-  transition: all 0.3s ease;
-  margin-left: auto;
-}
 
-.reset-btn:hover {
-  background: rgba(102, 126, 234, 0.3);
-  transform: rotate(180deg);
-}
 
-.reset-btn i {
-  font-size: 1.1rem;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 网格样式 */
+/* 网格样式 - 手机桌面风格 */
 .grid-container {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  grid-template-rows: repeat(4, auto);
-  gap: 15px;
+  grid-template-columns: repeat(10, minmax(80px, 1fr));
+  grid-template-rows: repeat(4, minmax(100px, 1fr));
+  gap: 12px;
   max-width: 1100px;
   margin: 0 auto;
   padding: 20px;
   position: relative;
+  grid-auto-flow: row dense;
+  align-items: start;
+  justify-items: center;
+  transition: grid-template-rows 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .grid-item {
   background: white;
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1),
-              box-shadow 0.3s cubic-bezier(0.4, 0.0, 0.2, 1),
-              opacity 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: all 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -494,9 +551,12 @@ onMounted(() => {
   cursor: move;
   position: relative;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   user-select: none;
   will-change: transform;
   touch-action: none;
+  box-sizing: border-box;
 }
 
 /* 确保所有grid-item保持在grid中 */
@@ -553,10 +613,45 @@ onMounted(() => {
   transform-origin: center center;
 }
 
+
+
 /* 卡片样式 */
 .widget-card {
   padding: 20px;
   text-align: center;
+}
+
+/* 单格高度卡片的紧凑样式 */
+.widget-calendar,
+.widget-weather,
+.widget-calculator {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.widget-calendar .widget-icon,
+.widget-weather .widget-icon,
+.widget-calculator .widget-icon {
+  line-height: 1;
+}
+
+.widget-calendar .widget-title,
+.widget-weather .widget-title,
+.widget-calculator .widget-title {
+  line-height: 1.2;
+}
+
+.widget-calendar .widget-preview,
+.widget-weather .widget-preview,
+.widget-calculator .widget-preview {
+  line-height: 1;
 }
 
 .widget-card:not(.chosen):not(.drag):hover {
@@ -590,6 +685,7 @@ onMounted(() => {
   font-size: 0.9rem;
   color: #666;
   font-weight: 500;
+  margin: 0;
 }
 
 .preview-time {
@@ -676,7 +772,49 @@ onMounted(() => {
 }
 
 .widget-calculator .widget-icon {
-  font-size: 3.5rem;
+  font-size: 2rem;
+  margin-bottom: 2px;
+}
+
+.widget-calculator .widget-title {
+  font-size: 0.8rem;
+  margin-bottom: 0;
+}
+
+.widget-calendar .widget-icon {
+  font-size: 1.5rem;
+  margin-bottom: 2px;
+}
+
+.widget-calendar .widget-title {
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+.widget-calendar .widget-preview {
+  margin-top: 0;
+}
+
+.widget-calendar .preview-date {
+  font-size: 1.3rem !important;
+}
+
+.widget-weather .widget-icon {
+  font-size: 1.6rem;
+  margin-bottom: 2px;
+}
+
+.widget-weather .widget-title {
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+.widget-weather .widget-preview {
+  margin-top: 0;
+}
+
+.widget-weather .preview-temp {
+  font-size: 0.95rem !important;
 }
 
 .widget-folder .widget-icon {
@@ -808,7 +946,7 @@ onMounted(() => {
   
   .grid-container {
     grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: auto;
+    grid-template-rows: repeat(4, minmax(100px, 1fr));
     max-width: 100%;
     gap: 10px;
   }

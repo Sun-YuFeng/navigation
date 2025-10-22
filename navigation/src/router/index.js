@@ -2,8 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/Home.vue'
 import LoginView from '../views/Login.vue'
 import SettingsView from '../views/Settings.vue'
-import WeatherView from '../views/Weather.vue'
-import ClockView from '../views/Clock.vue'
+import CommunityView from '../views/Community.vue'
+import CategoryDetailView from '../views/CategoryDetail.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,15 +26,15 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/weather',
-      name: 'weather',
-      component: WeatherView,
+      path: '/community',
+      name: 'community',
+      component: CommunityView,
       meta: { requiresAuth: true }
     },
     {
-      path: '/clock',
-      name: 'clock',
-      component: ClockView,
+      path: '/category/:id',
+      name: 'category',
+      component: CategoryDetailView,
       meta: { requiresAuth: true }
     },
   ],

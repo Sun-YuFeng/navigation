@@ -210,9 +210,9 @@ const formattedDisplay = computed(() => {
 <style scoped>
 .calculator {
   background: #1a1a1a;
-  border-radius: 20px;
-  padding: 20px;
-  max-width: 320px;
+  border-radius: 12px;
+  padding: 12px;
+  max-width: 300px;
   margin: 0 auto;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   font-family: 'Segoe UI', system-ui, sans-serif;
@@ -220,11 +220,11 @@ const formattedDisplay = computed(() => {
 
 .calculator-display {
   background: #000;
-  border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 20px;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
   text-align: right;
-  min-height: 60px;
+  min-height: 35px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -232,7 +232,7 @@ const formattedDisplay = computed(() => {
 
 .display-value {
   color: white;
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: 300;
   word-break: break-all;
   line-height: 1;
@@ -241,14 +241,14 @@ const formattedDisplay = computed(() => {
 .calculator-buttons {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 6px;
 }
 
 .btn {
   border: none;
   border-radius: 50%;
-  height: 70px;
-  font-size: 1.5rem;
+  height: 40px;
+  font-size: 1rem;
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -273,7 +273,7 @@ const formattedDisplay = computed(() => {
 
 .btn.zero {
   grid-column: span 2;
-  border-radius: 35px;
+  border-radius: 20px;
 }
 
 .btn.operator {
@@ -311,17 +311,17 @@ const formattedDisplay = computed(() => {
 /* 响应式设计 */
 @media (max-width: 480px) {
   .calculator {
-    max-width: 280px;
-    padding: 15px;
+    max-width: 260px;
+    padding: 10px;
   }
   
   .btn {
-    height: 60px;
-    font-size: 1.3rem;
+    height: 35px;
+    font-size: 0.9rem;
   }
   
   .display-value {
-    font-size: 2rem;
+    font-size: 1.3rem;
   }
 }
 

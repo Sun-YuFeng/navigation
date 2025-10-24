@@ -179,7 +179,7 @@ export default {
 
 <style scoped>
 .calendar-card {
-  max-width: 400px;
+  max-width: 600px;
   margin: 0 auto;
   background: white;
   border-radius: 12px;
@@ -190,13 +190,13 @@ export default {
 .calendar-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 20px;
+  padding: 25px;
   text-align: center;
 }
 
 .calendar-header h3 {
-  margin: 0 0 15px 0;
-  font-size: 1.2em;
+  margin: 0 0 20px 0;
+  font-size: 1.5em;
   font-weight: 600;
 }
 
@@ -204,18 +204,18 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 25px;
 }
 
 .nav-btn {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,38 +227,39 @@ export default {
 }
 
 .current-month {
-  font-size: 1.1em;
+  font-size: 1.3em;
   font-weight: 500;
-  min-width: 120px;
+  min-width: 150px;
 }
 
 .calendar-wrapper {
-  padding: 20px;
+  padding: 25px;
 }
 
 .weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
-  margin-bottom: 10px;
+  gap: 2px;
+  margin-bottom: 15px;
 }
 
 .weekday {
   text-align: center;
   font-weight: 600;
   color: #666;
-  padding: 8px 0;
-  font-size: 0.9em;
+  padding: 12px 0;
+  font-size: 1.1em;
 }
 
 .days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
+  gap: 2px;
 }
 
 .day-cell {
   aspect-ratio: 1;
+  min-height: 45px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -304,7 +305,7 @@ export default {
 }
 
 .day-number {
-  font-size: 0.9em;
+  font-size: 1.1em;
   font-weight: 500;
 }
 

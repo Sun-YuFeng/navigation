@@ -383,7 +383,7 @@ onMounted(() => {
 
       <!-- 模态框 - 日历 -->
       <div v-if="activeModal === 'calendar'" class="modal-overlay" @click="closeModal">
-        <div class="modal-content" @click.stop>
+        <div class="modal-content modal-calendar" @click.stop>
           <button class="modal-close" @click="closeModal">
             <i class="uil uil-times"></i>
           </button>
@@ -911,10 +911,98 @@ onMounted(() => {
 /* 模态框中的组件样式 */
 .modal-content :deep(.clock-container),
 .modal-content :deep(.calendar-card),
-.modal-content :deep(.weather-container),
-.modal-content :deep(.calculator) {
+.modal-content :deep(.weather-container) {
   max-width: 800px;
   margin: 0 auto;
+}
+
+/* 计算器模态框特殊样式 */
+.modal-content:has(.calculator) {
+  max-width: 90vw !important;
+  width: auto !important;
+  min-width: 400px;
+  overflow: visible !important; /* 去除滚动条 */
+}
+
+.modal-content :deep(.calculator) {
+  max-width: 500px !important;
+  width: 100% !important;
+  margin: 0 auto;
+  padding-right: 50px; /* 为关闭按钮预留空间 */
+}
+
+.modal-content :deep(.calculator) .calculator {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 20px;
+}
+
+.modal-content :deep(.calculator) .btn {
+  height: 60px;
+  font-size: 1.4rem;
+}
+
+.modal-content :deep(.calculator) .display-value {
+  font-size: 2.2rem;
+}
+
+/* 日历模态框特殊样式 */
+.modal-content:has(.calendar) {
+  max-width: 95vw;
+  width: auto;
+  min-width: 600px;
+  overflow: visible;
+}
+
+.modal-content :deep(.calendar) {
+  max-width: 700px;
+  width: 100%;
+  margin: 0 auto;
+  padding-right: 50px; /* 为关闭按钮预留空间 */
+}
+
+.modal-content :deep(.calendar) .calendar-card {
+  max-width: 100%;
+  width: 100%;
+  padding: 30px;
+}
+
+.modal-content :deep(.calendar) .calendar-header {
+  padding: 25px;
+}
+
+.modal-content :deep(.calendar) .calendar-header h3 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.modal-content :deep(.calendar) .current-month {
+  font-size: 1.3rem;
+  min-width: 150px;
+}
+
+.modal-content :deep(.calendar) .nav-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+}
+
+.modal-content :deep(.calendar) .calendar-wrapper {
+  padding: 25px;
+}
+
+.modal-content :deep(.calendar) .weekday {
+  font-size: 1.1rem;
+  padding: 12px 0;
+}
+
+.modal-content :deep(.calendar) .day-cell {
+  aspect-ratio: 1;
+  min-height: 45px;
+}
+
+.modal-content :deep(.calendar) .day-number {
+  font-size: 1.1rem;
 }
 
 /* 文件夹模态框特殊样式 */

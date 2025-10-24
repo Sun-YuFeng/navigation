@@ -30,13 +30,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
 import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
 const show = ref(false)
 const buttonPosition = ref(null)
+const userExistingCategories = ref([])
 
 // 计算容器样式
 const containerStyle = computed(() => {
@@ -60,23 +61,76 @@ const triangleStyle = computed(() => {
   }
 })
 
-// 可用的分类选项
-const availableCategories = ref([
-  { name: 'AI', icon: 'uil-robot', color: '#3498db' },
-  { name: '购物', icon: 'uil-shopping-cart', color: '#e74c3c' },
-  { name: '娱乐', icon: 'uil-game-structure', color: '#9b59b6' },
-  { name: '影视', icon: 'uil-film', color: '#e67e22' },
-  { name: '编程', icon: 'uil-desktop', color: '#2ecc71' },
-  { name: '音乐', icon: 'uil-music', color: '#1abc9c' },
-  { name: '媒体', icon: 'uil-play-circle', color: '#f39c12' },
-  { name: '学习', icon: 'uil-book-open', color: '#34495e' },
-  { name: '阅读', icon: 'uil-book', color: '#16a085' },
-  { name: '设计', icon: 'uil-palette', color: '#8e44ad' }
-])
+// 从数据库加载所有可用的分类选项（排除媒体分类）
+const allCategories = ref([])
+
+// 加载数据库中的分类模板
+const loadCategoryTemplates = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('category_templates')
+      .select('*')
+      .neq('name', '媒体') // 排除媒体分类，因为它是默认分类
+      .order('sort_order')
+    
+    if (!error && data) {
+      allCategories.value = data.map(template => ({
+        name: template.name,
+        icon: template.icon,
+        color: template.color
+      }))
+    }
+  } catch (error) {
+    console.error('加载分类模板失败:', error)
+  }
+}
+
+// 过滤后的可用分类选项（排除用户已有的分类）
+const availableCategories = computed(() => {
+  const existingNames = userExistingCategories.value.map(cat => cat.name)
+  return allCategories.value.filter(cat => !existingNames.includes(cat.name))
+})
+
+// 加载用户已有分类
+const loadUserCategories = async () => {
+  if (!authStore.user?.id) return
+  
+  try {
+    const { data, error } = await supabase
+      .from('user_category_mappings')
+      .select(`
+        *,
+        category_templates (
+          name,
+          icon,
+          color
+        )
+      `)
+      .eq('user_id', authStore.user.id)
+    
+    if (!error && data) {
+      userExistingCategories.value = data.map(mapping => ({
+        name: mapping.category_templates.name,
+        icon: mapping.category_templates.icon,
+        color: mapping.category_templates.color
+      }))
+    }
+  } catch (error) {
+    console.error('加载用户分类失败:', error)
+  }
+}
 
 // 打开选择器
-const openPicker = (buttonRect) => {
+const openPicker = async (buttonRect) => {
   buttonPosition.value = buttonRect
+  await loadUserCategories()
+  
+  // 检查是否已达到最大分类数量（6个）
+  if (userExistingCategories.value.length >= 6) {
+    alert('您已达到最大分类数量限制（6个），无法添加更多分类。')
+    return
+  }
+  
   show.value = true
 }
 
@@ -88,26 +142,54 @@ const closePicker = () => {
 // 选择分类
 const selectCategory = async (category) => {
   try {
-    const { data, error } = await supabase
-      .from('user_categories')
-      .insert([
-        {
-          user_id: authStore.user.id,
-          name: category.name,
-          icon: category.icon,
-          color: category.color
-        }
-      ])
-      .select()
+    if (!authStore.user?.id) {
+      console.error('用户未登录')
+      return
+    }
+
+    // 1. 首先获取对应的分类模板ID
+    const { data: templateData, error: templateError } = await supabase
+      .from('category_templates')
+      .select('id')
+      .eq('name', category.name)
+      .single()
     
-    if (error) throw error
+    if (templateError) throw templateError
+    
+    // 2. 在user_category_mappings表中创建用户映射
+    const { error: mappingError } = await supabase
+      .from('user_category_mappings')
+      .insert([{
+        user_id: authStore.user.id,
+        template_id: templateData.id,
+        sort_order: await getNextSortOrder()
+      }])
+    
+    if (mappingError) throw mappingError
     
     // 触发自定义事件
-    emit('categoryAdded', data[0])
+    emit('categoryAdded', { ...category, id: templateData.id })
     closePicker()
   } catch (error) {
     console.error('添加分类失败:', error)
   }
+}
+
+// 获取下一个排序序号
+const getNextSortOrder = async () => {
+  const { data, error } = await supabase
+    .from('user_category_mappings')
+    .select('sort_order')
+    .eq('user_id', authStore.user.id)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+  
+  if (error) {
+    console.error('获取排序序号失败:', error)
+    return 0
+  }
+  
+  return data.length > 0 ? data[0].sort_order + 1 : 0
 }
 
 // 定义事件
@@ -117,6 +199,14 @@ const emit = defineEmits(['categoryAdded'])
 defineExpose({
   openPicker,
   closePicker
+})
+
+// 初始化时加载用户分类和分类模板
+onMounted(() => {
+  loadCategoryTemplates()
+  if (authStore.user?.id) {
+    loadUserCategories()
+  }
 })
 </script>
 

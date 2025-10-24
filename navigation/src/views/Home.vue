@@ -4,10 +4,9 @@ import Clock from '../components/Clock.vue'
 import Calendar from '../components/Calendar.vue'
 import Weather from '../components/Weather.vue'
 import Calculator from '../components/Calculator.vue'
-import Folder from '../components/Folder.vue'
 import draggable from 'vuedraggable'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '@/stores/auth.js'
 import { ref, onMounted, computed } from 'vue'
 
 // 类型定义
@@ -201,7 +200,7 @@ const handleBaiduSearch = () => {
 }
 
 // 打开模态框（拖拽时不触发）
-const openModal = (modalName) => {
+const openModal = (modalName: string) => {
   if (!isDragging.value) {
     activeModal.value = modalName
   }
@@ -223,8 +222,8 @@ const loadLayout = () => {
   const savedLayout = localStorage.getItem('dashboardLayout')
   if (savedLayout) {
     try {
-      const layout = JSON.parse(savedLayout)
-      const newItems = []
+      const layout: string[] = JSON.parse(savedLayout)
+      const newItems: GridItem[] = []
       
       // 按照保存的顺序重新排列
       layout.forEach(id => {

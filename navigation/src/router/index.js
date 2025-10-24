@@ -3,7 +3,6 @@ import HomeView from '../views/Home.vue'
 import LoginView from '../views/Login.vue'
 import SettingsView from '../views/Settings.vue'
 import CommunityView from '../views/Community.vue'
-import CategoryDetailView from '../views/CategoryDetail.vue'
 import ClassifyView from '../views/Classify.vue'
 
 const router = createRouter({
@@ -33,16 +32,11 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/category/:id',
-      name: 'category',
-      component: CategoryDetailView,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/classify',
+      path: '/classify/:categoryId?',
       name: 'classify',
       component: ClassifyView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
+      props: true
     },
   ],
 })

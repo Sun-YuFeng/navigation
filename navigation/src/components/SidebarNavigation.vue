@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../stores/auth.js'
 import { supabase } from '../supabase.js'
 import ProfileEditCard from './ProfileEditCard.vue'
 import CategoryPicker from './CategoryPicker.vue'
@@ -11,9 +11,9 @@ const authStore = useAuthStore()
 
 // 固定分类数据
 const fixedCategories = ref([
-  { id: 1, name: '首页', icon: 'uil-home', route: '/' },
-  { id: 2, name: '社区', icon: 'uil-users-alt', route: '/community' },
-  { id: 3, name: '媒体', icon: 'uil-play-circle', route: '/classify' },
+  { id: 'home', name: '首页', icon: 'uil-home', route: '/' },
+  { id: 'community', name: '社区', icon: 'uil-users-alt', route: '/community' },
+  { id: 'media', name: '媒体', icon: 'uil-play-circle', route: '/classify' },
 ])
 
 // 用户自定义分类
@@ -27,15 +27,26 @@ const loadUserCategories = async () => {
   if (authStore.user?.id) {
     try {
       const { data, error } = await supabase
-        .from('user_categories')
-        .select('*')
+        .from('user_category_mappings')
+        .select(`
+          *,
+          category_templates (
+            id,
+            name,
+            icon,
+            color
+          )
+        `)
         .eq('user_id', authStore.user.id)
         .order('sort_order')
       
-      if (!error) {
-        userCategories.value = data.map(category => ({
-          ...category,
-          route: `/category/${category.id}`
+      if (!error && data) {
+        userCategories.value = data.map(mapping => ({
+          id: mapping.category_templates.id,
+          name: mapping.category_templates.name,
+          icon: mapping.category_templates.icon,
+          color: mapping.category_templates.color,
+          route: `/classify/${mapping.category_templates.id}`
         }))
       }
     } catch (error) {
@@ -74,17 +85,35 @@ const showProfileCard = ref(false)
 const loadUserAvatar = async () => {
   if (authStore.user?.id) {
     try {
-      const { data, error } = await supabase
+      // 优先查询user_profiles表（个人资料页面使用的表）
+      const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('avatar_url')
         .eq('id', authStore.user.id)
         .single()
       
-      if (!error && data?.avatar_url) {
-        userAvatar.value = data.avatar_url
+      if (!profileError && profileData?.avatar_url) {
+        userAvatar.value = profileData.avatar_url
+        console.log('从user_profiles表加载头像成功:', profileData.avatar_url)
+      } else {
+        // 如果user_profiles表没有头像，再查询users表
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('avatar_url')
+          .eq('id', authStore.user.id)
+          .single()
+        
+        if (!userError && userData?.avatar_url) {
+          userAvatar.value = userData.avatar_url
+          console.log('从users表加载头像成功:', userData.avatar_url)
+        } else {
+          console.log('未找到用户头像，使用默认头像')
+        }
       }
     } catch (error) {
       console.error('加载用户头像失败:', error)
+      // 如果查询失败，使用默认头像
+      userAvatar.value = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iIzAwN2JmZiIvPgo8Y2lyY2xlIGN4PSIxNiIgY3k9IjEyIiByPSI0IiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMTYgMjRDMjAgMjQgMjQgMjIgMjQgMThIMEMwLjAwMSAyMiA0IDI0IDE2IDI0WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+'
     }
   }
 }
@@ -144,9 +173,7 @@ const navigateTo = (route) => {
         class="nav-item user-category-item"
         @click="navigateTo(category.route)"
       >
-        <div class="category-icon" :style="{ backgroundColor: category.color }">
-          <i :class="['uil', category.icon]"></i>
-        </div>
+        <i :class="['uil', category.icon]"></i>
         <span class="tooltip">{{ category.name }}</span>
       </div>
     </div>
@@ -211,12 +238,9 @@ const navigateTo = (route) => {
 }
 
 .user-categories-section {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 15px;
-  overflow-y: auto;
-  max-height: calc(100vh - 300px);
   margin: 10px 0;
 }
 
@@ -313,32 +337,6 @@ const navigateTo = (route) => {
   font-weight: bold;
 }
 
-.user-category-item {
-  position: relative;
-}
-
-.user-category-item .category-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.user-category-item .category-icon i {
-  font-size: 16px;
-  color: white;
-}
-
-.user-category-item:hover .category-icon {
-  transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-
-
 .tooltip {
   position: absolute;
   left: 100%;
@@ -353,7 +351,7 @@ const navigateTo = (route) => {
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
-  z-index: 1000;
+  z-index: 1100;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 

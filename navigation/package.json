@@ -19,6 +19,7 @@
     "vue-router": "^4.5.1",
     "vue-unicons": "^3.3.1",
     "vue3-calendar": "^0.1.2",
+    "vue3-grid-layout": "^1.0.0",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {

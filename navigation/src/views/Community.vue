@@ -11,9 +11,16 @@
           <div class="nav-card">
             <h2 class="nav-title">我的导航</h2>
             
+            <!-- 用户状态提示 -->
+            <div class="user-section">
+              <div class="user-info">
+                <span class="user-email">HI，{{ userName }}</span>
+              </div>
+            </div>
+            
             <!-- 添加链接按钮 -->
             <div class="add-link-section">
-              <button @click="showAddLinkModal = true" class="add-link-btn">
+              <button @click="handleAddLinkClick" class="add-link-btn">
                 <span class="plus-icon">+</span>
                 添加链接
               </button>
@@ -25,6 +32,7 @@
                 v-for="(link, index) in customLinks" 
                 :key="index" 
                 class="link-card"
+                @click="handleCustomLinkClick(link)"
               >
                 <div class="link-card-content">
                   <img :src="link.icon || '/default-icon.png'" :alt="link.name" class="link-icon">
@@ -33,10 +41,29 @@
                     <p class="link-url">{{ link.url }}</p>
                   </div>
                 </div>
-                <button @click="removeCustomLink(index)" class="link-delete-btn">×</button>
+                <button @click.stop="removeCustomLink(index)" class="link-delete-btn">×</button>
+              </div>
+              
+              <!-- 空状态提示 -->
+              <div v-if="currentUser && customLinks.length === 0" class="empty-state">
+                <div class="empty-icon">📋</div>
+                <p class="empty-text">还没有添加任何链接</p>
+                <p class="empty-subtext">点击上方的"添加链接"按钮开始创建您的个人导航</p>
               </div>
             </div>
           </div>
+        </div>
+        
+        <!-- 10个类别的导航卡片 -->
+        <div class="category-navigation">
+          <ProgrammingTools 
+            v-for="category in categories" 
+            :key="category.title"
+            :title="category.title" 
+            :icon="category.icon"
+            :tools="category.tools"
+            @tool-click="handleCategoryToolClick"
+          />
         </div>
         
         <!-- 添加链接模态框 -->
@@ -64,8 +91,18 @@
               <!-- 网站图标区域 -->
               <div class="icon-section">
                 <div class="icon-preview">
-                  <img :src="newLink.icon || '/default-icon.png'" :alt="newLink.name" class="website-icon">
-                  <button class="upload-icon-btn">上传图标</button>
+                  <img :src="newLink.icon_url || '@/assets/smile.jpeg'" :alt="newLink.name" class="website-icon">
+                  <div class="icon-actions">
+                    <input 
+                      type="file" 
+                      ref="iconInput" 
+                      accept="image/*" 
+                      @change="handleIconUpload" 
+                      style="display: none"
+                    >
+                    <button @click="$refs.iconInput.click()" class="upload-icon-btn">上传图标</button>
+                    <button @click="resetIcon" class="reset-icon-btn">重置图标</button>
+                  </div>
                 </div>
               </div>
               
@@ -93,7 +130,7 @@
                 <div class="input-group">
                   <label>网站描述</label>
                   <textarea 
-                    v-model="newLink.desc" 
+                    v-model="newLink.description" 
                     placeholder="请输入网站描述" 
                     class="info-textarea"
                     rows="3"
@@ -108,43 +145,21 @@
             </div>
           </div>
         </div>
+        
 
-        <!-- 热门推荐区域 -->
-        <div class="hot-recommendation">
-          <h2 class="section-title">热门推荐</h2>
-          <div class="tabs">
-            <button 
-              v-for="(tab, index) in tabs" 
-              :key="index" 
-              :class="{ 'active': currentTab === index }" 
-              @click="currentTab = index"
-            >
-              {{ tab }}
-            </button>
-            <button class="rank-btn">排行榜</button>
-          </div>
-          <div class="app-grid">
-            <div 
-              v-for="(app, index) in filteredApps" 
-              :key="index" 
-              class="app-card"
-            >
-              <img :src="app.icon" :alt="app.name" class="app-icon">
-              <div class="app-info">
-                <h3 class="app-name">{{ app.name }}</h3>
-                <p class="app-desc">{{ app.desc }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import SidebarNavigation from '../components/SidebarNavigation.vue'
+import ProgrammingTools from '../components/ProgrammingTools.vue'
+import { getAllCategories } from '../utils/categoryData'
+import { supabase } from '../supabase'
+import { useAuthStore } from '../stores/auth.js'
 
 // 模态框显示状态
 const showAddLinkModal = ref(false)
@@ -154,9 +169,22 @@ const customLinks = ref([])
 const newLink = ref({ 
   name: '', 
   url: '', 
-  desc: '',
-  icon: '/default-icon.png'
+  description: '',
+  icon_url: '/default-icon.png'
 })
+
+// 10个类别的导航数据
+const categories = ref(getAllCategories())
+
+// 使用 Pinia store 获取用户信息
+const authStore = useAuthStore()
+
+// 计算属性获取用户昵称
+const userName = computed(() => {
+  return authStore.user?.displayName || authStore.user?.username || '用户'
+})
+
+
 
 // 热门推荐标签和应用数据
 const tabs = ['全部', '工具', '娱乐', '学习']
@@ -179,32 +207,134 @@ const filteredApps = computed(() => {
   return apps.value.filter(app => app.category === tabs[currentTab.value]);
 })
 
-// 方法
-const addCustomLink = () => {
+// 生命周期
+onMounted(async () => {
+  await authStore.initializeAuth()
+  await loadCustomLinks();
+})
+
+// 加载用户自定义链接
+const loadCustomLinks = async () => {
+  const { data, error } = await supabase
+    .from('user_custom_links')
+    .select('*')
+    .order('created_at', { ascending: true })
+  
+  if (!error && data) {
+    customLinks.value = data.map(link => ({
+      ...link,
+      desc: link.description,
+      icon: link.icon_url
+    }))
+  }
+}
+
+// 添加自定义链接
+const addCustomLink = async () => {
   if (newLink.value.name && newLink.value.url) {
     // 验证URL格式
     if (!newLink.value.url.startsWith('http://') && !newLink.value.url.startsWith('https://')) {
       newLink.value.url = 'https://' + newLink.value.url;
     }
-    customLinks.value.push({ ...newLink.value });
-    newLink.value = { 
-      name: '', 
-      url: '', 
-      desc: '',
-      icon: '/default-icon.png'
-    };
-    showAddLinkModal.value = false;
+    
+    // 保存到数据库
+    const { data, error } = await supabase
+      .from('user_custom_links')
+      .insert([{
+        name: newLink.value.name,
+        url: newLink.value.url,
+        description: newLink.value.description,
+        icon_url: newLink.value.icon_url
+      }])
+      .select()
+    
+    if (!error && data) {
+      // 添加到本地列表
+      const newLinkData = data[0]
+      customLinks.value.push({
+        ...newLinkData,
+        desc: newLinkData.description,
+        icon: newLinkData.icon_url
+      })
+      
+      // 重置表单
+      newLink.value = { 
+        name: '', 
+        url: '', 
+        description: '',
+        icon_url: '/default-icon.png'
+      };
+      showAddLinkModal.value = false;
+    } else {
+      alert('保存失败，请重试')
+    }
   }
 }
 
-const removeCustomLink = (index) => {
-  customLinks.value.splice(index, 1);
+// 删除自定义链接
+const removeCustomLink = async (index) => {
+  const link = customLinks.value[index]
+  if (!link.id) {
+    customLinks.value.splice(index, 1)
+    return
+  }
+  
+  const { error } = await supabase
+    .from('user_custom_links')
+    .delete()
+    .eq('id', link.id)
+  
+  if (!error) {
+    customLinks.value.splice(index, 1)
+  } else {
+    alert('删除失败，请重试')
+  }
 }
 
-// 解析网站信息（暂未实现）
-const parseWebsite = () => {
-  // 后期实现网站解析功能
-  console.log('开始解析网站:', newLink.value.url);
+// 解析网站信息
+const parseWebsite = async () => {
+  if (!newLink.value.url) {
+    alert('请输入网站URL')
+    return
+  }
+  
+  try {
+    // 验证URL格式
+    let url = newLink.value.url
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url
+      newLink.value.url = url
+    }
+    
+    // 获取网站信息
+    const domain = new URL(url).hostname
+    
+    // 使用多个favicon服务，提高成功率
+    const faviconServices = [
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
+      `https://favicon.im/api/?url=${url}`,
+      `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${url}&size=64`
+    ]
+    
+    // 设置默认图标
+    newLink.value.icon_url = faviconServices[0]
+    
+    if (!newLink.value.name) {
+      // 从URL中提取网站名称
+      const nameFromUrl = domain.replace('www.', '').split('.')[0]
+      newLink.value.name = nameFromUrl.charAt(0).toUpperCase() + nameFromUrl.slice(1)
+    }
+    
+    if (!newLink.value.description) {
+      newLink.value.description = `快速访问 ${domain}`
+    }
+    
+    console.log('网站解析完成:', newLink.value)
+    alert('网站信息已自动填充，请检查并修改')
+  } catch (error) {
+    console.error('解析网站失败:', error)
+    alert('解析网站失败，请手动填写信息')
+  }
 }
 
 // 清空解析结果
@@ -212,9 +342,51 @@ const clearParse = () => {
   newLink.value = { 
     name: '', 
     url: newLink.value.url, // 保留URL
-    desc: '',
-    icon: '/default-icon.png'
+    description: '',
+    icon_url: '/default-icon.png'
   };
+}
+
+// 处理类别工具点击
+const handleCategoryToolClick = (tool) => {
+  console.log('类别工具被点击:', tool.title)
+  if (tool.url && tool.url !== '#') {
+    window.open(tool.url, '_blank')
+  }
+}
+
+// 处理自定义链接点击
+const handleCustomLinkClick = (link) => {
+  if (link.url) {
+    window.open(link.url, '_blank')
+  }
+}
+
+// 处理添加链接点击
+const handleAddLinkClick = () => {
+  showAddLinkModal.value = true
+}
+
+
+
+// 处理图标上传
+const handleIconUpload = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      newLink.value.icon_url = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+// 重置图标
+const resetIcon = () => {
+  const domain = newLink.value.url ? new URL(newLink.value.url).hostname : ''
+  newLink.value.icon_url = domain ? 
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : 
+    '/default-icon.png'
 }
 </script>
 
@@ -252,19 +424,71 @@ const clearParse = () => {
 .nav-title {
   font-size: 24px;
   margin-bottom: 20px;
-  display: flex;
-  align-items: center;
+  text-align: left; /* 已有左对齐，保留 */
   color: #333;
   font-weight: 600;
+  display: flex; /* 新增：让文字与图标在同一行 */
+  align-items: center; /* 新增：垂直居中对齐 */
 }
 
-.nav-title::before {
-  content: '';
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  background: url('https://via.placeholder.com/24') no-repeat center;
-  margin-right: 12px;
+
+.user-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-email {
+  font-size: 14px;
+  color: #666;
+}
+
+.logout-btn {
+  padding: 6px 12px;
+  background: #ff6b6b;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.logout-btn:hover {
+  background: #ff5252;
+}
+
+.login-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.login-prompt span {
+  font-size: 14px;
+  color: #666;
+}
+
+.login-btn {
+  padding: 6px 12px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.login-btn:hover {
+  background: #0056b3;
 }
 
 .add-link-section {
@@ -299,77 +523,163 @@ const clearParse = () => {
 }
 
 .custom-links-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .link-card {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  transition: all 0.3s;
-  border: 1px solid #e9ecef;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  padding: 8px;
+  transition: all 0.3s ease;
+  height: 50px;
+  overflow: hidden;
+  width: calc(16.666% - 6.666px); /* 6列布局 */
+  position: relative;
 }
 
 .link-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 .link-card-content {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 1;
+  width: 100%;
+  height: 100%;
 }
 
 .link-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  object-fit: cover;
+  width: 45px;
+  height: 45px;
+  flex-shrink: 0;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .link-info {
-  flex: 1;
+  flex-grow: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .link-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
   color: #333;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
 }
 
 .link-url {
-  font-size: 12px;
+  font-size: 11px;
   color: #666;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .link-delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
   background: #ff6b6b;
   color: #fff;
   border: none;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 10px;
   transition: background-color 0.3s;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.link-card:hover .link-delete-btn {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .link-delete-btn:hover {
   background: #ff5252;
+}
+
+/* 响应式适配 - 调整列数 */
+@media (max-width: 1200px) {
+  .link-card {
+    width: calc(20% - 6.4px); /* 5列 */
+  }
+}
+
+@media (max-width: 992px) {
+  .link-card {
+    width: calc(25% - 6px); /* 4列 */
+  }
+}
+
+@media (max-width: 768px) {
+  .link-card {
+    width: calc(33.333% - 5.333px); /* 3列 */
+  }
+}
+
+@media (max-width: 576px) {
+  .link-card {
+    width: calc(50% - 4px); /* 2列 */
+  }
+}
+
+@media (max-width: 400px) {
+  .link-card {
+    width: 100%; /* 1列 */
+  }
+}
+
+/* 空状态样式 */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-text {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.empty-subtext {
+  font-size: 14px;
+  color: #999;
 }
 
 /* 模态框样式 */
@@ -503,7 +813,13 @@ const clearParse = () => {
   border: 1px solid #ddd;
 }
 
-.upload-icon-btn {
+.icon-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upload-icon-btn, .reset-icon-btn {
   padding: 6px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -512,11 +828,17 @@ const clearParse = () => {
   font-size: 13px;
   cursor: pointer;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .upload-icon-btn:hover {
   border-color: #007bff;
   color: #007bff;
+}
+
+.reset-icon-btn:hover {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
 }
 
 .info-input-section {
@@ -735,6 +1057,28 @@ const clearParse = () => {
   .rank-btn {
     margin-left: 0;
     margin-top: 10px;
+  }
+}
+
+/* 类别导航区域样式 */
+.category-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* 确保类别导航与顶部我的导航左对齐 */
+.category-navigation .programming-tools-container {
+  margin: 0; /* 移除自动居中 */
+  width: 100%; /* 占满容器宽度 */
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .category-navigation {
+    gap: 15px;
+    margin-top: 15px;
   }
 }
 </style>

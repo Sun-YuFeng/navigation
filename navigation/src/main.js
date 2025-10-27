@@ -1,4 +1,5 @@
 import './assets/main.css'
+import '@iconscout/unicons/css/line.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

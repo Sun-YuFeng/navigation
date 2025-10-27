@@ -94,7 +94,7 @@ const loadUserAvatar = async () => {
       
       if (!profileError && profileData?.avatar_url) {
         userAvatar.value = profileData.avatar_url
-        console.log('从user_profiles表加载头像成功:', profileData.avatar_url)
+        console.log('从user_profiles表加载头像成功:')
       } else {
         // 如果user_profiles表没有头像，再查询users表
         const { data: userData, error: userError } = await supabase

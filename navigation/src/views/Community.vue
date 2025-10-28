@@ -9,7 +9,7 @@
         <!-- 顶部自定义导航区域 -->
         <div class="custom-nav">
           <div class="nav-card">
-            <h2 class="nav-title">我的导航</h2>
+            <h2 class="nav-title">我的导航🌹🌹🌹🌹🌹</h2>
             
             <!-- 用户状态提示 -->
             <div class="user-section">
@@ -26,32 +26,51 @@
               </button>
             </div>
             
-            <!-- 自定义链接卡片 -->
-            <div class="custom-links-grid">
-              <div 
-                v-for="(link, index) in customLinks" 
-                :key="index" 
-                class="link-card"
-                @click="handleCustomLinkClick(link)"
-              >
-                <div class="link-card-content">
-                  <img :src="link.icon || '/default-icon.png'" :alt="link.name" class="link-icon">
-                  <div class="link-info">
-                    <h3 class="link-name">{{ link.name }}</h3>
-                    <p class="link-url">{{ link.url }}</p>
-                  </div>
-                </div>
-                <button @click.stop="removeCustomLink(index)" class="link-delete-btn">×</button>
+            <!-- 用户链接卡片展示区域 -->
+            <div class="user-links-section">
+              <div class="section-header">
+                <h3 class="section-title">个人链接🔗</h3>
+                <span class="link-count">{{ customLinks.length }} 个链接</span>
               </div>
               
-              <!-- 空状态提示 -->
-              <div v-if="currentUser && customLinks.length === 0" class="empty-state">
-                <div class="empty-icon">📋</div>
-                <p class="empty-text">还没有添加任何链接</p>
-                <p class="empty-subtext">点击上方的"添加链接"按钮开始创建您的个人导航</p>
+              <!-- 自定义链接卡片网格 - 仿照ProgrammingTools.vue样式 -->
+              <div class="custom-links-container">
+                <div class="cards-wrapper">
+                  <div 
+                    v-for="(link, index) in customLinks" 
+                    :key="index" 
+                    class="card"
+                    @click="handleCustomLinkClick(link)"
+                  >
+                    <div class="card-icon-container">
+                      <img :src="getLinkIcon(link)" :alt="link.website_name + '图标'" class="card-icon" @error="handleIconError($event, link)">
+                    </div>
+                    <div class="card-text">
+                      <h3 class="card-title">{{ link.website_name }}</h3>
+                      <p class="card-desc">{{ link.website_description || link.website_url }}</p>
+                    </div>
+                    <button @click.stop="removeCustomLink(index)" class="link-delete-btn">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- 空状态提示 -->
+                <div v-if="customLinks.length === 0" class="empty-state">
+                  <div class="empty-icon">📋</div>
+                  <p class="empty-text">还没有添加任何链接</p>
+                  <p class="empty-subtext">点击上方的"添加链接"按钮开始创建您的个人导航</p>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+        
+        <!-- 网站分享广场 -->
+        <div class="website-share-section">
+          <WebsiteShareSquare />
         </div>
         
         <!-- 10个类别的导航卡片 -->
@@ -91,7 +110,7 @@
               <!-- 网站图标区域 -->
               <div class="icon-section">
                 <div class="icon-preview">
-                  <img :src="newLink.icon_url || '@/assets/smile.jpeg'" :alt="newLink.name" class="website-icon">
+                  <img :src="newLink.icon_url || getDefaultIconUrl()" :alt="newLink.name" class="website-icon">
                   <div class="icon-actions">
                     <input 
                       type="file" 
@@ -100,8 +119,10 @@
                       @change="handleIconUpload" 
                       style="display: none"
                     >
-                    <button @click="$refs.iconInput.click()" class="upload-icon-btn">上传图标</button>
-                    <button @click="resetIcon" class="reset-icon-btn">重置图标</button>
+                    <div class="action-buttons">
+                      <button @click="$refs.iconInput.click()" class="upload-icon-btn">上传图标</button>
+                      <button @click="resetIcon" class="reset-icon-btn">重置图标</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -157,6 +178,7 @@
 import { ref, computed, onMounted } from 'vue'
 import SidebarNavigation from '../components/SidebarNavigation.vue'
 import ProgrammingTools from '../components/ProgrammingTools.vue'
+import WebsiteShareSquare from '../components/WebsiteShareSquare.vue'
 import { getAllCategories } from '../utils/categoryData'
 import { supabase } from '../supabase'
 import { useAuthStore } from '../stores/auth.js'
@@ -170,7 +192,7 @@ const newLink = ref({
   name: '', 
   url: '', 
   description: '',
-  icon_url: '/default-icon.png'
+  icon_url: '/src/assets/smile.jpeg'
 })
 
 // 10个类别的导航数据
@@ -184,21 +206,26 @@ const userName = computed(() => {
   return authStore.user?.displayName || authStore.user?.username || '用户'
 })
 
+// 计算属性获取当前用户状态
+const currentUser = computed(() => {
+  return authStore.user
+})
+
 
 
 // 热门推荐标签和应用数据
 const tabs = ['全部', '工具', '娱乐', '学习']
 const currentTab = ref(0)
 const apps = ref([
-  { name: 'NBtab-美女动态', desc: '清新无广告，浏览更...', icon: 'https://via.placeholder.com/40', category: '娱乐' },
-  { name: '享趣追剧神器', desc: '超高清4K，永久免费...', icon: 'https://via.placeholder.com/40', category: '娱乐' },
-  { name: '火车太顺', desc: '火车票抢票助手', icon: 'https://via.placeholder.com/40', category: '工具' },
-  { name: '555电影', desc: '免费影视平台', icon: 'https://via.placeholder.com/40', category: '娱乐' },
-  { name: 'DeepSeek', desc: '深度求索AI', icon: 'https://via.placeholder.com/40', category: '工具' },
-  { name: '豆包', desc: '字节跳动智能助手', icon: 'https://via.placeholder.com/40', category: '工具' },
-  { name: '电子木鱼', desc: '赛博功德积累神器', icon: 'https://via.placeholder.com/40', category: '娱乐' },
-  { name: 'Excalidraw', desc: '手绘风格流程图工具', icon: 'https://via.placeholder.com/40', category: '工具' },
-  { name: '反向词典', desc: '清华大学开源词汇工具', icon: 'https://via.placeholder.com/40', category: '学习' },
+  { name: 'NBtab-美女动态', desc: '清新无广告，浏览更...', icon: '/src/assets/smile.jpeg', category: '娱乐' },
+  { name: '享趣追剧神器', desc: '超高清4K，永久免费...', icon: '/src/assets/smile.jpeg', category: '娱乐' },
+  { name: '火车太顺', desc: '火车票抢票助手', icon: '/src/assets/smile.jpeg', category: '工具' },
+  { name: '555电影', desc: '免费影视平台', icon: '/src/assets/smile.jpeg', category: '娱乐' },
+  { name: 'DeepSeek', desc: '深度求索AI', icon: '/src/assets/smile.jpeg', category: '工具' },
+  { name: '豆包', desc: '字节跳动智能助手', icon: '/src/assets/smile.jpeg', category: '工具' },
+  { name: '电子木鱼', desc: '赛博功德积累神器', icon: '/src/assets/smile.jpeg', category: '娱乐' },
+  { name: 'Excalidraw', desc: '手绘风格流程图工具', icon: '/src/assets/smile.jpeg', category: '工具' },
+  { name: '反向词典', desc: '清华大学开源词汇工具', icon: '/src/assets/smile.jpeg', category: '学习' },
 ])
 
 // 计算属性
@@ -215,36 +242,49 @@ onMounted(async () => {
 
 // 加载用户自定义链接
 const loadCustomLinks = async () => {
+  if (!currentUser.value) return;
+  
   const { data, error } = await supabase
-    .from('user_custom_links')
+    .from('personal_navigation')
     .select('*')
+    .eq('user_id', currentUser.value.id)
     .order('created_at', { ascending: true })
   
   if (!error && data) {
     customLinks.value = data.map(link => ({
       ...link,
-      desc: link.description,
-      icon: link.icon_url
+      desc: link.website_description
     }))
   }
 }
 
 // 添加自定义链接
 const addCustomLink = async () => {
+  if (!currentUser.value) {
+    alert('请先登录')
+    return;
+  }
+  
   if (newLink.value.name && newLink.value.url) {
     // 验证URL格式
     if (!newLink.value.url.startsWith('http://') && !newLink.value.url.startsWith('https://')) {
       newLink.value.url = 'https://' + newLink.value.url;
     }
     
-    // 保存到数据库
+    // 只存储用户上传的自定义图片，不存储解析的图片
+    const customIconUrl = newLink.value.icon_url === '/src/assets/smile.jpeg' || 
+                         newLink.value.icon_url.startsWith('blob:') ? 
+                         newLink.value.icon_url : null;
+    
+    // 保存到personal_navigation表
     const { data, error } = await supabase
-      .from('user_custom_links')
+      .from('personal_navigation')
       .insert([{
-        name: newLink.value.name,
-        url: newLink.value.url,
-        description: newLink.value.description,
-        icon_url: newLink.value.icon_url
+        user_id: currentUser.value.id,
+        website_url: newLink.value.url,
+        website_name: newLink.value.name,
+        website_description: newLink.value.description,
+        custom_icon_url: customIconUrl
       }])
       .select()
     
@@ -253,8 +293,7 @@ const addCustomLink = async () => {
       const newLinkData = data[0]
       customLinks.value.push({
         ...newLinkData,
-        desc: newLinkData.description,
-        icon: newLinkData.icon_url
+        desc: newLinkData.website_description
       })
       
       // 重置表单
@@ -262,7 +301,7 @@ const addCustomLink = async () => {
         name: '', 
         url: '', 
         description: '',
-        icon_url: '/default-icon.png'
+        icon_url: '/src/assets/smile.jpeg'
       };
       showAddLinkModal.value = false;
     } else {
@@ -280,7 +319,7 @@ const removeCustomLink = async (index) => {
   }
   
   const { error } = await supabase
-    .from('user_custom_links')
+    .from('personal_navigation')
     .delete()
     .eq('id', link.id)
   
@@ -309,15 +348,8 @@ const parseWebsite = async () => {
     // 获取网站信息
     const domain = new URL(url).hostname
     
-    // 使用多个favicon服务，提高成功率
-    const faviconServices = [
-      `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
-      `https://favicon.im/api/?url=${url}`,
-      `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${url}&size=64`
-    ]
-    
-    // 设置默认图标
-    newLink.value.icon_url = faviconServices[0]
+    // 使用指定的favicon服务
+    newLink.value.icon_url = `https://favicon.im/${domain}`
     
     if (!newLink.value.name) {
       // 从URL中提取网站名称
@@ -337,13 +369,19 @@ const parseWebsite = async () => {
   }
 }
 
+// 获取默认图标URL
+const getDefaultIconUrl = () => {
+  // 使用正确的静态资源路径
+  return '/src/assets/smile.jpeg'
+}
+
 // 清空解析结果
 const clearParse = () => {
   newLink.value = { 
     name: '', 
     url: newLink.value.url, // 保留URL
     description: '',
-    icon_url: '/default-icon.png'
+    icon_url: '/src/assets/smile.jpeg'
   };
 }
 
@@ -357,8 +395,8 @@ const handleCategoryToolClick = (tool) => {
 
 // 处理自定义链接点击
 const handleCustomLinkClick = (link) => {
-  if (link.url) {
-    window.open(link.url, '_blank')
+  if (link.website_url) {
+    window.open(link.website_url, '_blank')
   }
 }
 
@@ -385,8 +423,36 @@ const handleIconUpload = (event) => {
 const resetIcon = () => {
   const domain = newLink.value.url ? new URL(newLink.value.url).hostname : ''
   newLink.value.icon_url = domain ? 
-    `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : 
-    '/default-icon.png'
+    `https://favicon.im/${domain}` : 
+    '/src/assets/smile.jpeg'
+}
+
+// 获取链接图标
+const getLinkIcon = (link) => {
+  // 如果链接有自定义图标，优先使用
+  if (link.custom_icon_url && link.custom_icon_url !== '/src/assets/smile.jpeg') {
+    return link.custom_icon_url;
+  }
+  
+  // 否则使用favicon.im服务获取网站图标
+  if (link.website_url) {
+    try {
+      const domain = new URL(link.website_url).hostname;
+      return `https://favicon.im/${domain}`;
+    } catch (error) {
+      console.error('解析URL失败:', error);
+      return '/src/assets/smile.jpeg';
+    }
+  }
+  
+  // 默认图标
+  return '/src/assets/smile.jpeg';
+}
+
+// 处理图标加载错误
+const handleIconError = (event, link) => {
+  console.log('图标加载失败，使用默认图标');
+  event.target.src = '/src/assets/smile.jpeg';
 }
 </script>
 
@@ -522,74 +588,90 @@ const resetIcon = () => {
   font-weight: bold;
 }
 
-.custom-links-grid {
+.custom-links-container {
+  max-width: 1200px;
+  height: 240px;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* 卡片容器 */
+.cards-wrapper {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 16px;
+  height: calc(100% - 40px); /* 减去标题高度和间距 */
+  overflow-y: auto; /* 允许滚动 */
 }
 
-.link-card {
+/* 单个卡片样式 - 仿照ProgrammingTools.vue */
+.card {
   display: flex;
-  align-items: center;
+  align-items: center; /* 垂直居中 */
   background-color: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 5px;
   padding: 8px;
   transition: all 0.3s ease;
-  height: 50px;
+  height: 50px; /* 固定卡片高度 */
   overflow: hidden;
-  width: calc(16.666% - 6.666px); /* 6列布局 */
   position: relative;
+  cursor: pointer;
 }
 
-.link-card:hover {
+.card:hover {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
 }
 
-.link-card-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-}
-
-.link-icon {
-  width: 45px;
-  height: 45px;
-  flex-shrink: 0;
-  margin-right: 8px;
+/* 左侧正方形图标区域 */
+.card-icon-container {
+  width: 45px; /* 正方形宽度 */
+  height: 45px; /* 正方形高度，与卡片内容区高度一致 */
+  flex-shrink: 0; /* 不缩小 */
+  margin-right: 8px; /* 与文字区间距 */
   display: flex;
   align-items: center;
   justify-content: center;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
 }
 
-.link-info {
-  flex-grow: 1;
+/* 卡片图标 - 铺满整个正方形区域 */
+.card-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* 右侧文字区域 */
+.card-text {
+  flex-grow: 1; /* 占满剩余空间 */
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
+  justify-content: flex-start;
+  padding-top: 0px;
 }
 
-.link-name {
-  font-size: 13px;
-  color: #333;
-  margin-bottom: 3px;
+/* 卡片标题 */
+.card-title {
+  font-size: 15px;
+  color: #424242;
+  margin-bottom: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 600;
 }
 
-.link-url {
+/* 卡片描述 */
+.card-desc {
   font-size: 11px;
-  color: #666;
+  color: #909090;
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -618,7 +700,7 @@ const resetIcon = () => {
   transform: scale(0.8);
 }
 
-.link-card:hover .link-delete-btn {
+.card:hover .link-delete-btn {
   opacity: 1;
   transform: scale(1);
 }
@@ -628,42 +710,53 @@ const resetIcon = () => {
 }
 
 /* 响应式适配 - 调整列数 */
+@media (min-width: 1200px) {
+  .card {
+    width: calc(16.666% - 6.666px); /* 6列布局 */
+  }
+}
+
 @media (max-width: 1200px) {
-  .link-card {
+  .card {
     width: calc(20% - 6.4px); /* 5列 */
   }
 }
 
 @media (max-width: 992px) {
-  .link-card {
+  .card {
     width: calc(25% - 6px); /* 4列 */
   }
 }
 
 @media (max-width: 768px) {
-  .link-card {
+  .card {
     width: calc(33.333% - 5.333px); /* 3列 */
   }
 }
 
 @media (max-width: 576px) {
-  .link-card {
+  .card {
     width: calc(50% - 4px); /* 2列 */
   }
 }
 
 @media (max-width: 400px) {
-  .link-card {
+  .card {
     width: 100%; /* 1列 */
   }
 }
 
 /* 空状态样式 */
 .empty-state {
-  grid-column: 1 / -1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 40px 20px;
+  padding: 60px 20px;
   color: #666;
+  min-height: 200px;
 }
 
 .empty-icon {
@@ -794,38 +887,46 @@ const resetIcon = () => {
 
 .icon-section {
   margin-bottom: 16px;
-  padding: 12px;
+  padding: 16px;
   background: #f8f9fa;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .icon-preview {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .website-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
   object-fit: cover;
-  border: 1px solid #ddd;
+  border: 2px solid #ddd;
+  flex-shrink: 0;
 }
 
 .icon-actions {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.action-buttons {
+  display: flex;
   gap: 8px;
 }
 
 .upload-icon-btn, .reset-icon-btn {
-  padding: 6px 12px;
+  padding: 8px 16px;
   border: 1px solid #ddd;
   border-radius: 4px;
   background: #fff;
   color: #666;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.3s;
   white-space: nowrap;
@@ -924,18 +1025,7 @@ const resetIcon = () => {
 .section-title {
   font-size: 24px;
   margin-bottom: 15px;
-  display: flex;
-  align-items: center;
   color: #333;
-}
-
-.section-title::before {
-  content: '';
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  background: url('https://via.placeholder.com/20/ff5722') no-repeat center;
-  margin-right: 8px;
 }
 
 .tabs {
@@ -1060,6 +1150,24 @@ const resetIcon = () => {
   }
 }
 
+/* 网站分享广场区域样式 */
+.website-share-section {
+  margin-top: 20px;
+}
+
+/* 确保网站分享广场与顶部我的导航左对齐 */
+.website-share-section .website-share-square {
+  background-color: transparent;
+  padding: 0;
+}
+
+.website-share-section .website-share-square .main-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* 类别导航区域样式 */
 .category-navigation {
   display: flex;
@@ -1079,6 +1187,20 @@ const resetIcon = () => {
   .category-navigation {
     gap: 15px;
     margin-top: 15px;
+  }
+  
+  .website-share-section {
+    margin-top: 15px;
+  }
+  
+  .website-share-section .website-share-square .main-container {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .website-share-section .website-share-square .main-container {
+    padding: 10px;
   }
 }
 </style>

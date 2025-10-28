@@ -232,7 +232,7 @@ export const categoryData = {
       { title: ' 快手电商 ', description: ' 直播电商平台 ', icon: 'https://favicon.im/www.kuaishou.com', url: 'https://www.kuaishou.com' },
       { title: ' 得物 ', description: ' 潮品交易平台 ', icon: 'https://favicon.im/www.dewu.com', url: 'https://www.dewu.com' },
       { title: ' 小红书商城 ', description: ' 社交购物平台 ', icon: 'https://favicon.im/www.xiaohongshu.com', url: 'https://www.xiaohongshu.com' },
-      { title: ' 闲鱼 ', description: 'C2C 二手交易平台 ', icon: 'https://favicon.im/www.xianyu.com', url: 'https://www.xianyu.com' },
+      { title: ' 闲鱼 ', description: 'C2C 二手交易平台 ', icon: 'https://favicon.im/www.goofish.com/', url: 'https://www.goofish.com' },
       { title: ' 网易严选 ', description: 'ODM 模式电商 ', icon: 'https://favicon.im/you.163.com', url: 'https://you.163.com' },
       { title: ' 盒马鲜生 ', description: ' 生鲜新零售平台 ', icon: 'https://favicon.im/www.hema.com', url: 'https://www.hema.com' },
       { title: ' 美团优选 ', description: ' 社区团购平台 ', icon: 'https://favicon.im/www.meituan.com', url: 'https://www.meituan.com' }
@@ -245,7 +245,45 @@ export const getAllCategories = () => {
   return Object.values(categoryData)
 }
 
+// 分类名称映射表（数据库分类名称 -> categoryData键名）
+const categoryNameMapping = {
+  'AI': 'news',           // AI -> 新闻
+  '购物': 'shopping',      // 购物 -> 购物
+  '娱乐': 'entertainment', // 娱乐 -> 娱乐
+  '影视': 'entertainment', // 影视 -> 娱乐
+  '编程': 'programming',   // 编程 -> 编程
+  '音乐': 'entertainment', // 音乐 -> 娱乐
+  '学习': 'study',         // 学习 -> 学习
+  '阅读': 'study',         // 阅读 -> 学习
+  '设计': 'media',         // 设计 -> 媒体
+  '媒体': 'media',         // 媒体 -> 媒体
+  '新闻': 'news',          // 新闻 -> 新闻
+  '社交': 'social',        // 社交 -> 社交
+  '工作': 'work',          // 工作 -> 工作
+  '工具': 'tools',         // 工具 -> 工具
+  '健康': 'health'         // 健康 -> 健康
+}
+
 // 根据类别名称获取数据
 export const getCategoryByName = (name) => {
-  return categoryData[name]
+  // 首先尝试直接通过键名查找
+  if (categoryData[name]) {
+    return categoryData[name]
+  }
+  
+  // 如果直接查找失败，检查映射表
+  if (categoryNameMapping[name]) {
+    const mappedKey = categoryNameMapping[name]
+    return categoryData[mappedKey]
+  }
+  
+  // 如果映射表也没有，遍历所有分类查找匹配的名称
+  for (const key in categoryData) {
+    if (categoryData[key].title === name) {
+      return categoryData[key]
+    }
+  }
+  
+  // 如果还是找不到，返回null
+  return null
 }

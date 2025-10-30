@@ -1,8 +1,5 @@
 <template>
   <div class="classify-container">
-    <!-- 左侧导航条组件 -->
-    <SidebarNavigation />
-    
     <!-- 主内容区域 -->
     <div class="main-content">
       <!-- 顶部标题区域 -->
@@ -196,7 +193,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import SidebarNavigation from '../components/SidebarNavigation.vue'
+
 import { getCategoryByName } from '../utils/categoryData'
 import { supabase, updateSupabaseHeaders, validateUserId } from '../supabase.js'
 import { useAuthStore } from '../stores/auth'

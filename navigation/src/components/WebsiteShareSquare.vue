@@ -47,14 +47,25 @@
                   class="share-item"
                   @click="handleSiteClick(site)"
                   :title="`分享人：${site.uploader} | 分享时间：${site.uploadTime}`"
+                  @mouseenter="handleCardHover(site, index)"
+                  @mouseleave="handleCardLeave(index)"
                 >
                   <div class="card-icon-container">
                     <img :src="getFaviconUrl(site.url)" :alt="site.name" class="favicon-icon" @error="handleFaviconError">
                   </div>
                   <div class="card-text">
                     <h3 class="card-title">{{ site.name }}</h3>
-                    <p class="card-desc">{{ getSiteDescription(site.name) }}</p>
+                    <p class="card-desc">{{ site.description || getSiteDescription(site.name) }}</p>
                   </div>
+                  <!-- 加号按钮 -->
+                  <button 
+                    v-if="showAddButton[index] && !isMySharedSite(site)"
+                    class="add-to-navigation-btn"
+                    @click.stop="addToPersonalNavigation(site)"
+                    title="添加到个人导航"
+                  >
+                    <i class="uil uil-plus"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -248,13 +259,15 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { supabase, getCurrentUserId } from '../supabase.js'
 
-// 定义props
+// 定义props和emits
 const props = defineProps({
   personalLinks: {
     type: Array,
     default: () => []
   }
 })
+
+const emit = defineEmits(['navigation-updated'])
 
 // 响应式数据
 const searchKeyword = ref('')
@@ -268,6 +281,10 @@ const newShareSite = ref({
   description: '',
   icon_url: '/src/assets/smile.jpeg'
 })
+
+// 悬停显示加号相关状态
+const showAddButton = ref({})
+const hoverTimers = ref({})
 
 // 发布按钮引用
 const publishButtonRef = ref(null)
@@ -310,14 +327,7 @@ const fetchHotSites = async () => {
   try {
     const { data, error } = await supabase
       .from('shared_websites')
-      .select(`
-        *,
-        users!inner (
-          user_profiles!inner (
-            display_name
-          )
-        )
-      `)
+      .select('*')
       .order('click_times', { ascending: false })
       .limit(3)
     
@@ -326,9 +336,10 @@ const fetchHotSites = async () => {
     hotSites.value = data.map(site => ({
       name: site.name,
       url: site.url,
-      uploader: site.users?.user_profiles?.display_name || '匿名用户',
+      uploader: '匿名用户', // 简化显示，避免复杂关联
       uploadTime: new Date(site.created_at).toLocaleDateString(),
-      usageCount: site.click_times || 0
+      usageCount: site.click_times || 0,
+      user_id: site.user_id // 添加用户ID
     }))
   } catch (error) {
     console.error('获取热门网站失败:', error)
@@ -343,14 +354,7 @@ const fetchTodaySites = async () => {
     
     const { data, error } = await supabase
       .from('shared_websites')
-      .select(`
-        *,
-        users!inner (
-          user_profiles!inner (
-            display_name
-          )
-        )
-      `)
+      .select('*')
       .gte('created_at', startOfDay.toISOString())
       .order('created_at', { ascending: false })
       .limit(10)
@@ -360,9 +364,10 @@ const fetchTodaySites = async () => {
     todaySites.value = data.map(site => ({
       name: site.name,
       url: site.url,
-      uploader: site.users?.user_profiles?.display_name || '匿名用户',
+      uploader: '匿名用户', // 简化显示，避免复杂关联
       uploadTime: new Date(site.created_at).toLocaleDateString(),
-      usageCount: site.click_times || 0
+      usageCount: site.click_times || 0,
+      user_id: site.user_id // 添加用户ID
     }))
   } catch (error) {
     console.error('获取今日分享失败:', error)
@@ -380,14 +385,7 @@ const fetchAllSites = async (page = 1, append = false) => {
     
     const { data, error } = await supabase
       .from('shared_websites')
-      .select(`
-        *,
-        users!inner (
-          user_profiles!inner (
-            display_name
-          )
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .range(from, to)
     
@@ -396,9 +394,10 @@ const fetchAllSites = async (page = 1, append = false) => {
     const newSites = data.map(site => ({
       name: site.name,
       url: site.url,
-      uploader: site.users?.user_profiles?.display_name || '匿名用户',
+      uploader: '匿名用户',
       uploadTime: new Date(site.created_at).toLocaleDateString(),
-      description: site.description || ''
+      description: site.description || '',
+      user_id: site.user_id // 添加用户ID
     }))
     
     if (append) {
@@ -461,15 +460,120 @@ const initData = async () => {
 const isTodayScrolling = ref(true)
 const scrollInterval = ref(null)
 
-// 计算属性：过滤网站列表
+// 计算属性：过滤网站列表（支持模糊查询名称、描述、URL）
 const filteredSites = computed(() => {
   if (!searchKeyword.value) {
     return allSites.value
   }
-  return allSites.value.filter(site => 
-    site.toLowerCase().includes(searchKeyword.value.toLowerCase())
-  )
+  
+  const keyword = searchKeyword.value.toLowerCase().trim()
+  
+  return allSites.value.filter(site => {
+    // 检查网站名称是否包含关键词
+    const nameMatch = site.name && site.name.toLowerCase().includes(keyword)
+    
+    // 检查网站描述是否包含关键词
+    const descMatch = site.description && site.description.toLowerCase().includes(keyword)
+    
+    // 检查网站URL是否包含关键词
+    const urlMatch = site.url && site.url.toLowerCase().includes(keyword)
+    
+    // 返回任意一个匹配的结果
+    return nameMatch || descMatch || urlMatch
+  })
 })
+
+// 悬停显示加号相关方法
+const handleCardHover = (site, index) => {
+  // 如果是自己分享的网站，不显示加号
+  if (isMySharedSite(site)) {
+    return
+  }
+  
+  // 清除之前的定时器
+  if (hoverTimers.value[index]) {
+    clearTimeout(hoverTimers.value[index])
+  }
+  
+  // 设置1秒后显示加号
+  hoverTimers.value[index] = setTimeout(() => {
+    showAddButton.value = { ...showAddButton.value, [index]: true }
+  }, 1000)
+}
+
+const handleCardLeave = (index) => {
+  // 清除定时器
+  if (hoverTimers.value[index]) {
+    clearTimeout(hoverTimers.value[index])
+    delete hoverTimers.value[index]
+  }
+  
+  // 隐藏加号
+  showAddButton.value = { ...showAddButton.value, [index]: false }
+}
+
+// 判断是否是当前用户分享的网站
+const isMySharedSite = (site) => {
+  const userId = getCurrentUserId()
+  if (!userId) return false
+  
+  // 使用数据库中的user_id字段进行精确判断
+  return site.user_id === userId
+}
+
+// 添加到个人导航
+const addToPersonalNavigation = async (site) => {
+  const userId = getCurrentUserId()
+  if (!userId) {
+    alert('请先登录后再添加到个人导航')
+    return
+  }
+  
+  try {
+    // 检查是否已经存在相同的网站
+    const { data: existingLinks, error: checkError } = await supabase
+      .from('personal_navigation')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('website_url', site.url)
+    
+    if (checkError) throw checkError
+    
+    if (existingLinks && existingLinks.length > 0) {
+      alert('该网站已存在于您的个人导航中')
+      return
+    }
+    
+    // 添加到个人导航表
+    const { data, error } = await supabase
+      .from('personal_navigation')
+      .insert({
+        user_id: userId,
+        website_name: site.name,
+        website_url: site.url,
+        website_description: site.description || site.name
+        // 移除 website_icon 字段，因为表中可能不存在该字段
+      })
+      .select()
+    
+    if (error) throw error
+    
+    alert('网站已成功添加到个人导航！')
+    
+    // 立即隐藏加号按钮，避免重复添加
+    const siteIndex = allSites.value.findIndex(s => s.url === site.url)
+    if (siteIndex !== -1) {
+      showAddButton.value = { ...showAddButton.value, [siteIndex]: false }
+    }
+    
+    // 触发事件通知父组件更新
+    emit('navigation-updated')
+    
+  } catch (error) {
+    console.error('添加到个人导航失败:', error)
+    alert('添加到个人导航失败，请重试')
+  }
+}
 
 // 事件处理函数
 const handleSearch = () => {
@@ -1116,6 +1220,38 @@ onUnmounted(() => {
 .share-item:hover {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
+}
+
+/* 加号按钮样式 */
+.add-to-navigation-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.3s;
+  opacity: 0;
+  transform: scale(0.8);
+  z-index: 10;
+}
+
+.add-to-navigation-btn:hover {
+  background: #20c997;
+  transform: scale(1);
+}
+
+.share-item:hover .add-to-navigation-btn {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* 今日新分享区域 */

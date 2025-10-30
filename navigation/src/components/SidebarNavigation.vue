@@ -12,6 +12,7 @@ const authStore = useAuthStore()
 // 固定分类数据
 const fixedCategories = ref([
   { id: 'home', name: '首页', icon: 'uil-home', route: '/' },
+  { id: 'market', name: '工具集市', icon: 'uil-apps', route: '/market' },
   { id: 'community', name: '社区', icon: 'uil-users-alt', route: '/community' },
 ])
 
@@ -21,9 +22,27 @@ const userCategories = ref([])
 // 分类选择器引用
 const categoryPickerRef = ref(null)
 
-// 加载用户自定义分类
+// 数据缓存对象
+const dataCache = ref({
+  userCategories: null,
+  userAvatar: null,
+  lastUserId: null
+})
+
+// 检查缓存是否有效
+const isCacheValid = (cacheKey, userId) => {
+  return dataCache.value[cacheKey] !== null && dataCache.value.lastUserId === userId
+}
+
+// 加载用户自定义分类（带缓存）
 const loadUserCategories = async () => {
   if (authStore.user?.id) {
+    // 检查缓存是否有效
+    if (isCacheValid('userCategories', authStore.user.id)) {
+      userCategories.value = dataCache.value.userCategories
+      return
+    }
+    
     try {
       const { data, error } = await supabase
         .from('user_category_mappings')
@@ -40,13 +59,18 @@ const loadUserCategories = async () => {
         .order('sort_order')
       
       if (!error && data) {
-        userCategories.value = data.map(mapping => ({
+        const categories = data.map(mapping => ({
           id: mapping.category_templates.id,
           name: mapping.category_templates.name,
           icon: mapping.category_templates.icon,
           color: mapping.category_templates.color,
           route: `/classify/${mapping.category_templates.id}`
         }))
+        
+        // 更新缓存
+        userCategories.value = categories
+        dataCache.value.userCategories = categories
+        dataCache.value.lastUserId = authStore.user.id
       }
     } catch (error) {
       console.error('加载用户分类失败:', error)
@@ -65,9 +89,28 @@ const addCategory = (event) => {
 
 // 处理分类添加事件
 const handleCategoryAdded = (category) => {
-  // 重新加载用户分类
+  // 清除用户分类缓存，重新加载
+  dataCache.value.userCategories = null
   loadUserCategories()
 }
+
+// 清除缓存（用于用户切换或强制刷新）
+const clearCache = () => {
+  dataCache.value = {
+    userCategories: null,
+    userAvatar: null,
+    lastUserId: null
+  }
+}
+
+// 监听用户变化，切换用户时清除缓存
+watch(() => authStore.user?.id, (newUserId, oldUserId) => {
+  if (newUserId !== oldUserId) {
+    clearCache()
+    loadUserCategories()
+    loadUserAvatar()
+  }
+})
 
 // 初始化时加载用户分类
 onMounted(() => {
@@ -80,37 +123,46 @@ const userAvatar = ref('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD
 // 控制个人资料卡片显示
 const showProfileCard = ref(false)
 
-// 加载用户头像
+// 加载用户头像（带缓存）
 const loadUserAvatar = async () => {
   if (authStore.user?.id) {
+    // 检查缓存是否有效
+    if (isCacheValid('userAvatar', authStore.user.id)) {
+      userAvatar.value = dataCache.value.userAvatar
+      return
+    }
+    
     try {
-      // 优先查询user_profiles表（个人资料页面使用的表）
-      const { data: profileData, error: profileError } = await supabase
+      // 直接从 Supabase 获取用户信息，确保获取最新的头像
+      const { data: userData, error } = await supabase
         .from('user_profiles')
         .select('avatar_url')
         .eq('id', authStore.user.id)
         .single()
       
-      if (!profileError && profileData?.avatar_url) {
-        userAvatar.value = profileData.avatar_url
-      } else {
-        // 如果user_profiles表没有头像，再查询users表
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('avatar_url')
-          .eq('id', authStore.user.id)
-          .single()
+      if (!error && userData && userData.avatar_url) {
+        // 如果数据库中有头像，使用数据库中的头像
+        userAvatar.value = userData.avatar_url
+        dataCache.value.userAvatar = userData.avatar_url
+        dataCache.value.lastUserId = authStore.user.id
         
-        if (!userError && userData?.avatar_url) {
-          userAvatar.value = userData.avatar_url
-        } else {
-          // 未找到用户头像，使用默认头像
+        // 同时更新 localStorage 中的用户信息
+        const savedUser = localStorage.getItem('currentUser')
+        if (savedUser) {
+          const user = JSON.parse(savedUser)
+          user.avatar_url = userData.avatar_url
+          localStorage.setItem('currentUser', JSON.stringify(user))
         }
+      } else {
+        // 如果没有头像信息，直接使用默认头像
+        userAvatar.value = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwMDdiZmYiLz4KPGNqcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNCIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE2IDI0QzIwIDI0IDI0IDIyIDI0IDE4SDBDMC4wMDEgMjIgNCAyNCAxNiAyNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg=='
+        dataCache.value.userAvatar = userAvatar.value
+        dataCache.value.lastUserId = authStore.user.id
       }
     } catch (error) {
       console.error('加载用户头像失败:', error)
-      // 如果查询失败，使用默认头像
-      userAvatar.value = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwMDdiZmYiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNCIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE2IDI0QzIwIDI0IDI0IDIyIDI0IDE4SDBDMC4wMDEgMjIgNCAyNCAxNiAyNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg=='
+      // 如果出错，使用默认头像
+      userAvatar.value = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwMDdiZmYiLz4KPGNqcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNCIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE2IDI0QzIwIDI0IDI0IDIyIDI0IDE4SDBDMC4wMDEgMjIgNCAyNCAxNiAyNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg=='
     }
   }
 }

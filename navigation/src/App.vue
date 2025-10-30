@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import SidebarNavigation from './components/SidebarNavigation.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -39,7 +40,13 @@ onMounted(async () => {
 
 <template>
   <div id="app">
-    <router-view />
+    <!-- 左侧导航条组件（只在登录后显示） -->
+    <SidebarNavigation v-if="authStore.user" />
+    
+    <!-- 主内容区域 -->
+    <main class="main-content" :class="{ 'no-sidebar': !authStore.user }">
+      <router-view />
+    </main>
   </div>
 </template>
 
@@ -56,6 +63,18 @@ body {
 
 #app {
   min-height: 100vh;
+  display: flex;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 60px; /* 与侧边栏宽度一致 */
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+.main-content.no-sidebar {
+  margin-left: 0;
 }
 
 .loading {

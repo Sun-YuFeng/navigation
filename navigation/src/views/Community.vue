@@ -1,8 +1,5 @@
 <template>
   <div class="community-container">
-    <!-- 左侧导航条组件 -->
-    <SidebarNavigation />
-    
     <!-- 主内容区域 -->
     <div class="main-content">
       <div class="nav-container">
@@ -70,7 +67,7 @@
         
         <!-- 网站分享广场 -->
         <div class="website-share-section">
-          <WebsiteShareSquare :personal-links="customLinks" />
+          <WebsiteShareSquare :personal-links="customLinks" @navigation-updated="handleNavigationUpdated" />
         </div>
         
         <!-- 10个类别的导航卡片 -->
@@ -176,7 +173,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import SidebarNavigation from '../components/SidebarNavigation.vue'
+
 import ProgrammingTools from '../components/ProgrammingTools.vue'
 import WebsiteShareSquare from '../components/WebsiteShareSquare.vue'
 import { getAllCategories } from '../utils/categoryData'
@@ -435,6 +432,12 @@ const handleCustomLinkClick = (link) => {
   }
 }
 
+// 处理导航更新事件
+const handleNavigationUpdated = async () => {
+  console.log('收到导航更新事件，重新加载个人导航数据')
+  await loadCustomLinks()
+}
+
 // 处理添加链接点击
 const handleAddLinkClick = () => {
   showAddLinkModal.value = true
@@ -493,16 +496,15 @@ const handleIconError = (event, link) => {
 
 <style scoped>
 .community-container {
-  display: flex;
   min-height: 100vh;
 }
 
 .main-content {
-  flex: 1;
-  margin-left: 60px; /* 与导航栏宽度一致 */
-  padding: 20px;
+  margin-left: 30px;
+  padding: 40px;
   background-color: #f5f6fa;
   min-height: 100vh;
+  width: calc(100% - 30px);
 }
 
 .nav-container {
@@ -525,13 +527,12 @@ const handleIconError = (event, link) => {
 .nav-title {
   font-size: 24px;
   margin-bottom: 20px;
-  text-align: left; /* 已有左对齐，保留 */
+  text-align: left;
   color: #333;
   font-weight: 600;
-  display: flex; /* 新增：让文字与图标在同一行 */
-  align-items: center; /* 新增：垂直居中对齐 */
+  display: flex;
+  align-items: center;
 }
-
 
 .user-section {
   margin-bottom: 16px;
@@ -549,47 +550,6 @@ const handleIconError = (event, link) => {
 .user-email {
   font-size: 14px;
   color: #666;
-}
-
-.logout-btn {
-  padding: 6px 12px;
-  background: #ff6b6b;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.logout-btn:hover {
-  background: #ff5252;
-}
-
-.login-prompt {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.login-prompt span {
-  font-size: 14px;
-  color: #666;
-}
-
-.login-btn {
-  padding: 6px 12px;
-  background: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.login-btn:hover {
-  background: #0056b3;
 }
 
 .add-link-section {
@@ -625,7 +585,7 @@ const handleIconError = (event, link) => {
 
 .custom-links-container {
   max-width: 1200px;
-  height: 280px; /* 增加高度减少下方留白 */
+  height: 280px;
   margin: 0 auto;
   background-color: #fff;
   border-radius: 8px;
@@ -634,25 +594,23 @@ const handleIconError = (event, link) => {
   overflow: hidden;
 }
 
-/* 卡片容器 */
 .cards-wrapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 4px; /* 水平间距8px，垂直间距4px */
-  height: calc(100% - 40px); /* 减去标题高度和间距 */
-  overflow-y: auto; /* 允许滚动 */
+  gap: 8px 4px;
+  height: calc(100% - 40px);
+  overflow-y: auto;
 }
 
-/* 单个卡片样式 - 仿照ProgrammingTools.vue */
 .card {
   display: flex;
-  align-items: center; /* 垂直居中 */
+  align-items: center;
   background-color: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 5px;
   padding: 8px;
   transition: all 0.3s ease;
-  height: 55px; /* 固定卡片高度，增加5px避免描述被遮挡 */
+  height: 55px;
   overflow: hidden;
   position: relative;
   cursor: pointer;
@@ -663,18 +621,16 @@ const handleIconError = (event, link) => {
   transform: translateY(-1px);
 }
 
-/* 左侧正方形图标区域 */
 .card-icon-container {
-  width: 45px; /* 正方形宽度 */
-  height: 45px; /* 正方形高度，与卡片内容区高度一致 */
-  flex-shrink: 0; /* 不缩小 */
-  margin-right: 8px; /* 与文字区间距 */
+  width: 45px;
+  height: 45px;
+  flex-shrink: 0;
+  margin-right: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* 卡片图标 - 铺满整个正方形区域 */
 .card-icon {
   width: 100%;
   height: 100%;
@@ -682,9 +638,8 @@ const handleIconError = (event, link) => {
   border-radius: 4px;
 }
 
-/* 右侧文字区域 */
 .card-text {
-  flex-grow: 1; /* 占满剩余空间 */
+  flex-grow: 1;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -692,7 +647,6 @@ const handleIconError = (event, link) => {
   padding-top: 0px;
 }
 
-/* 卡片标题 */
 .card-title {
   font-size: 15px;
   color: #424242;
@@ -703,7 +657,6 @@ const handleIconError = (event, link) => {
   font-weight: 600;
 }
 
-/* 卡片描述 */
 .card-desc {
   font-size: 11px;
   color: #909090;
@@ -744,44 +697,42 @@ const handleIconError = (event, link) => {
   background: #ff5252;
 }
 
-/* 响应式适配 - 调整列数 */
 @media (min-width: 1200px) {
   .card {
-    width: calc(16.666% - 6.666px); /* 6列布局 */
+    width: calc(16.666% - 6.666px);
   }
 }
 
 @media (max-width: 1200px) {
   .card {
-    width: calc(20% - 6.4px); /* 5列 */
+    width: calc(20% - 6.4px);
   }
 }
 
 @media (max-width: 992px) {
   .card {
-    width: calc(25% - 6px); /* 4列 */
+    width: calc(25% - 6px);
   }
 }
 
 @media (max-width: 768px) {
   .card {
-    width: calc(33.333% - 5.333px); /* 3列 */
+    width: calc(33.333% - 5.333px);
   }
 }
 
 @media (max-width: 576px) {
   .card {
-    width: calc(50% - 4px); /* 2列 */
+    width: calc(50% - 4px);
   }
 }
 
 @media (max-width: 400px) {
   .card {
-    width: 100%; /* 1列 */
+    width: 100%;
   }
 }
 
-/* 空状态样式 */
 .empty-state {
   width: 100%;
   display: flex;
@@ -810,7 +761,6 @@ const handleIconError = (event, link) => {
   color: #999;
 }
 
-/* 模态框样式 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1053,144 +1003,16 @@ const handleIconError = (event, link) => {
   border-color: #0056b3;
 }
 
-.hot-recommendation {
-  margin-top: 40px;
-}
-
 .section-title {
   font-size: 24px;
   margin-bottom: 15px;
   color: #333;
 }
 
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.tabs button {
-  padding: 8px 15px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.tabs button:hover {
-  background: #f8f9fa;
-}
-
-.tabs button.active {
-  background: #007bff;
-  color: #fff;
-  border-color: #007bff;
-}
-
-.rank-btn {
-  margin-left: auto;
-  background: #ff9800;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 15px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-
-.rank-btn:hover {
-  background: #f57c00;
-}
-
-.app-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.app-card {
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  transition: all 0.3s;
-  background: #fff;
-  cursor: pointer;
-}
-
-.app-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-  border-color: #007bff;
-}
-
-.app-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  object-fit: cover;
-}
-
-.app-name {
-  font-size: 16px;
-  margin-bottom: 5px;
-  color: #333;
-  font-weight: 600;
-}
-
-.app-desc {
-  font-size: 14px;
-  color: #666;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 100%;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .main-content {
-    margin-left: 0;
-    padding: 10px;
-  }
-  
-  .nav-container {
-    padding: 10px;
-  }
-  
-  .link-input {
-    flex-direction: column;
-  }
-  
-  .app-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
-  }
-  
-  .tabs {
-    flex-wrap: wrap;
-  }
-  
-  .rank-btn {
-    margin-left: 0;
-    margin-top: 10px;
-  }
-}
-
-/* 网站分享广场区域样式 */
 .website-share-section {
   margin-top: 20px;
 }
 
-/* 确保网站分享广场与顶部我的导航左对齐 */
 .website-share-section .website-share-square {
   background-color: transparent;
   padding: 0;
@@ -1203,7 +1025,6 @@ const handleIconError = (event, link) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 类别导航区域样式 */
 .category-navigation {
   display: flex;
   flex-direction: column;
@@ -1211,14 +1032,21 @@ const handleIconError = (event, link) => {
   margin-top: 20px;
 }
 
-/* 确保类别导航与顶部我的导航左对齐 */
 .category-navigation .programming-tools-container {
-  margin: 0; /* 移除自动居中 */
-  width: 100%; /* 占满容器宽度 */
+  margin: 0;
+  width: 100%;
 }
 
-/* 响应式适配 */
 @media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 10px;
+  }
+  
+  .nav-container {
+    padding: 10px;
+  }
+  
   .category-navigation {
     gap: 15px;
     margin-top: 15px;

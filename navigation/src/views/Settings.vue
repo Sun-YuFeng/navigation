@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import SidebarNavigation from '../components/SidebarNavigation.vue'
+
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -63,9 +63,6 @@ onMounted(() => {
 
 <template>
   <div class="settings-container">
-    <!-- 左侧导航条组件 -->
-    <SidebarNavigation />
-
     <!-- 主内容区域 -->
     <div class="main-content">
       <!-- 标题区域 - 左对齐 -->

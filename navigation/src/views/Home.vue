@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import SidebarNavigation from '../components/SidebarNavigation.vue'
 import Clock from '../components/Clock.vue'
 import Calendar from '../components/Calendar.vue'
 import Weather from '../components/Weather.vue'
@@ -288,9 +287,6 @@ onMounted(() => {
 
 <template>
   <div class="home-container">
-    <!-- 左侧导航条组件 -->
-    <SidebarNavigation />
-    
     <!-- 主内容区域 -->
     <div class="main-content">
       <!-- 用户问候语 -->

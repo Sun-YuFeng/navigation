@@ -4,6 +4,7 @@ import LoginView from '../views/Login.vue'
 import SettingsView from '../views/Settings.vue'
 import CommunityView from '../views/Community.vue'
 import ClassifyView from '../views/Classify.vue'
+import MarketView from '../views/market.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,6 +30,12 @@ const router = createRouter({
       path: '/community',
       name: 'community',
       component: CommunityView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/market',
+      name: 'market',
+      component: MarketView,
       meta: { requiresAuth: true }
     },
     {

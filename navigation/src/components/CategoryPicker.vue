@@ -44,8 +44,24 @@ const containerStyle = computed(() => {
   if (!buttonPosition.value) return {}
   
   const buttonRect = buttonPosition.value
+  const windowHeight = window.innerHeight
+  
+  // 气泡框的预估高度（根据内容动态调整）
+  const bubbleHeight = Math.min(availableCategories.value.length * 60 + 100, 300)
+  
+  // 计算气泡框的垂直位置
+  let topPosition = buttonRect.top + buttonRect.height / 2
+  
+  // 如果气泡框会超出屏幕底部，则向上调整位置
+  if (topPosition + bubbleHeight > windowHeight - 20) {
+    topPosition = windowHeight - bubbleHeight - 20
+  }
+  
+  // 确保气泡框不会超出屏幕顶部
+  topPosition = Math.max(20, topPosition)
+  
   return {
-    top: `${buttonRect.top + buttonRect.height / 2}px`,
+    top: `${topPosition}px`,
     left: `${buttonRect.left + buttonRect.width}px`
   }
 })
@@ -55,8 +71,24 @@ const triangleStyle = computed(() => {
   if (!buttonPosition.value) return {}
   
   const buttonRect = buttonPosition.value
+  const windowHeight = window.innerHeight
+  const bubbleHeight = Math.min(availableCategories.value.length * 60 + 100, 300)
+  
+  // 计算三角形相对于气泡框的位置
+  let triangleTop = buttonRect.top + buttonRect.height / 2
+  
+  // 如果气泡框位置被调整过，需要相应调整三角形位置
+  if (triangleTop + bubbleHeight > windowHeight - 20) {
+    triangleTop = windowHeight - bubbleHeight - 20
+  }
+  
+  triangleTop = Math.max(20, triangleTop)
+  
+  // 三角形相对于气泡框的垂直偏移
+  const triangleOffset = buttonRect.top + buttonRect.height / 2 - triangleTop
+  
   return {
-    top: `${buttonRect.height / 2 - 8}px`,
+    top: `${triangleOffset - 8}px`,
     left: '-8px'
   }
 })
@@ -126,8 +158,8 @@ const openPicker = async (buttonRect) => {
   await loadUserCategories()
   
   // 检查是否已达到最大分类数量（6个）
-  if (userExistingCategories.value.length >= 6) {
-    alert('您已达到最大分类数量限制（6个），无法添加更多分类。')
+  if (userExistingCategories.value.length >= 5) {
+    alert('您已达到最大分类数量限制（5个），无法添加更多分类。')
     return
   }
   

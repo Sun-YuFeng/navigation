@@ -8,6 +8,9 @@
       <!-- 顶部标题区域 -->
       <div class="page-header">
         <h1 class="page-title">{{ currentCategoryName }}</h1>
+        <button class="delete-category-btn" @click="deleteCategory" title="删除该分类及其所有网站内容">
+          <i class="uil uil-trash-alt"></i>
+        </button>
       </div>
 
       <!-- 主要内容区域 - 大卡片 -->
@@ -19,15 +22,29 @@
             v-for="(site, index) in websites" 
             :key="index"
             class="website-item"
-            @click="openWebsite(site.url)"
+            @mouseenter="showDeleteButton(index)"
+            @mouseleave="hideDeleteButton(index)"
           >
-            <div class="website-icon-box">
-              <i :class="['uil', site.icon]"></i>
+            <div class="website-icon-box" @click="openWebsite(site.url)">
+              <img 
+                :src="getWebsiteIcon(site.url)" 
+                :alt="site.name"
+                class="website-icon-img"
+                @error="handleWebsiteIconError"
+              />
+              <!-- 删除按钮 -->
+              <button 
+                v-if="showDeleteIndex === index"
+                class="delete-btn"
+                @click.stop="deleteWebsite(site.id, index)"
+              >
+                <i class="uil uil-trash-alt"></i>
+              </button>
             </div>
             <span class="website-name">{{ site.name }}</span>
           </div>
 
-          <!-- 添加按钮：图标+文字 -->
+          <!-- 添加按钮：固定在最后一个格子位置 -->
           <div class="add-item" @click="showAddModal">
             <div class="add-icon-box">
               <i class="uil uil-plus"></i>
@@ -81,8 +98,20 @@
                     <h4 class="site-title">{{ site.title }}</h4>
                     <p class="site-desc">{{ site.description }}</p>
                   </div>
-                  <button class="add-site-btn" @click.stop="addRecommendedSite(site)">
-                    <i class="uil uil-plus"></i>
+                  <button 
+                    class="add-site-btn" 
+                    :class="{ 
+                      'remove-btn': isSiteAdded(site), 
+                      'loading-btn': loadingStates[site.url] 
+                    }"
+                    @click.stop="isSiteAdded(site) ? removeRecommendedSite(site) : addRecommendedSite(site)"
+                    :disabled="loadingStates[site.url]"
+                  >
+                    <i 
+                      v-if="!loadingStates[site.url]" 
+                      :class="isSiteAdded(site) ? 'uil uil-minus' : 'uil uil-plus'"
+                    ></i>
+                    <i v-else class="uil uil-spinner uil-spin"></i>
                   </button>
                 </div>
               </div>
@@ -166,12 +195,15 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import SidebarNavigation from '../components/SidebarNavigation.vue'
 import { getCategoryByName } from '../utils/categoryData'
-import { supabase } from '../supabase.js'
+import { supabase, updateSupabaseHeaders, validateUserId } from '../supabase.js'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 // 当前分类名称
 const currentCategoryName = ref('我的分类')
@@ -187,7 +219,7 @@ const loadCategoryName = async () => {
   }
   
   try {
-    // 从category_templates表查询分类名称
+    // 直接查询category_templates表获取分类名称
     const { data, error } = await supabase
       .from('category_templates')
       .select('name')
@@ -200,6 +232,8 @@ const loadCategoryName = async () => {
     } else if (data) {
       console.log('查询到的分类名称:', data.name)
       currentCategoryName.value = data.name
+    } else {
+      currentCategoryName.value = '我的分类'
     }
   } catch (error) {
     console.error('加载分类名称异常:', error)
@@ -229,25 +263,90 @@ const recommendedSites = computed(() => {
 })
 
 // 网站数据
-const websites = ref([
-  { name: '百度', url: 'https://baidu.com', icon: 'uil-search' },
-  { name: '知乎', url: 'https://zhihu.com', icon: 'uil-book-open' },
-  { name: 'B站', url: 'https://bilibili.com', icon: 'uil-play-circle' },
-  { name: 'GitHub', url: 'https://github.com', icon: 'uil-github' },
-  { name: '淘宝', url: 'https://taobao.com', icon: 'uil-shopping-cart' },
-  { name: '微信', url: 'https://weixin.qq.com', icon: 'uil-comment' },
-  { name: '微博', url: 'https://weibo.com', icon: 'uil-comment-alt' },
-  { name: '网易云', url: 'https://music.163.com', icon: 'uil-music' },
-  { name: '豆瓣', url: 'https://douban.com', icon: 'uil-star' },
-  { name: '腾讯视频', url: 'https://v.qq.com', icon: 'uil-film' },
-  { name: '京东', url: 'https://jd.com', icon: 'uil-shopping-bag' },
-  { name: '美团', url: 'https://meituan.com', icon: 'uil-utensils' },
-  { name: '饿了么', url: 'https://ele.me', icon: 'uil-pizza-slice' },
-  { name: '携程', url: 'https://ctrip.com', icon: 'uil-plane' },
-  { name: '滴滴', url: 'https://didiglobal.com', icon: 'uil-car' },
-  { name: '高德地图', url: 'https://amap.com', icon: 'uil-map-marker' },
-  { name: '钉钉', url: 'https://dingtalk.com', icon: 'uil-briefcase' },
-])
+const websites = ref([])
+
+// 删除按钮显示状态
+const showDeleteIndex = ref(-1)
+// 定时器引用
+const hoverTimers = ref({})
+
+// 从数据库加载网站数据
+const loadWebsites = async () => {
+  try {
+    const categoryTemplateId = route.params.categoryId
+    
+    console.log('路由参数 categoryId:', categoryTemplateId)
+    
+    if (!categoryTemplateId) {
+      console.log('没有分类ID，不加载网站数据')
+      websites.value = []
+      return
+    }
+    
+    // 获取当前用户ID
+    const user = authStore.user
+    
+    if (!user) {
+      console.log('用户未登录，不加载网站数据')
+      websites.value = []
+      return
+    }
+    
+    console.log('当前登录用户ID:', user.id)
+    
+    // 验证用户ID是否有效
+    const isValidUser = await validateUserId(user.id)
+    if (!isValidUser) {
+      console.error('用户ID无效，请重新登录')
+      websites.value = []
+      return
+    }
+    
+    // 更新Supabase认证头信息
+    updateSupabaseHeaders()
+    
+    // 首先通过category_templates的ID找到对应的user_category_mappings记录
+    console.log('正在查询user_category_mappings表，template_id:', categoryTemplateId, 'user_id:', user.id)
+    const { data: mappingData, error: mappingError } = await supabase
+      .from('user_category_mappings')
+      .select('id, user_id')
+      .eq('template_id', categoryTemplateId)
+      .eq('user_id', user.id)
+      .single()
+    
+    if (mappingError || !mappingData) {
+      console.log('未找到对应的用户分类映射，不加载网站数据，错误详情:', mappingError)
+      websites.value = []
+      return
+    }
+    
+    console.log('找到用户分类映射:', mappingData)
+    
+    // 使用存储过程查询网站数据
+    console.log('正在使用存储过程查询website_links表，category_mapping_id:', mappingData.id)
+    const { data, error } = await supabase.rpc('get_website_links', {
+      p_category_mapping_id: mappingData.id,
+      p_user_id: user.id
+    })
+    
+    if (error) {
+      console.error('加载网站数据失败:', error)
+      websites.value = []
+    } else {
+      console.log('从数据库加载网站数据成功:', data)
+      // 转换数据格式以匹配前端需求
+      websites.value = data.map(site => ({
+        id: site.id,
+        name: site.name,
+        url: site.url,
+        icon: site.icon || 'uil-globe'
+      }))
+    }
+  } catch (error) {
+    console.error('加载网站数据异常:', error)
+    websites.value = []
+  }
+}
 
 // 模态框状态
 const showModal = ref(false)
@@ -289,14 +388,236 @@ const selectRecommendedSite = (site) => {
   activeTab.value = 'custom'
 }
 
-// 直接添加推荐网站
-const addRecommendedSite = (site) => {
-  websites.value.push({
-    name: site.title,
-    url: site.url,
-    icon: site.icon || 'uil-globe' // 使用推荐网站的图标，无则兜底
+// 判断推荐网站是否已添加
+const isSiteAdded = (site) => {
+  return websites.value.some(website => website.url === site.url)
+}
+
+// 移除推荐网站
+const removeRecommendedSite = async (site) => {
+  try {
+    // 找到对应的网站记录
+    const websiteToRemove = websites.value.find(website => website.url === site.url)
+    
+    if (!websiteToRemove) {
+      console.log('未找到要移除的网站')
+      return
+    }
+    
+    // 获取当前用户ID
+    const user = authStore.user
+    
+    if (!user) {
+      alert('请先登录后再操作')
+      return
+    }
+    
+    console.log('开始移除网站，siteId:', websiteToRemove.id, '用户ID:', user.id)
+    
+    // 验证用户ID是否有效
+    const isValidUser = await validateUserId(user.id)
+    if (!isValidUser) {
+      alert('用户ID无效，请重新登录')
+      return
+    }
+    
+    // 更新Supabase认证头信息
+    updateSupabaseHeaders()
+    
+    // 使用存储过程删除网站记录
+    const { error } = await supabase.rpc('delete_website_link', {
+      p_id: websiteToRemove.id,
+      p_user_id: user.id
+    })
+    
+    if (error) {
+      console.error('移除网站失败:', error)
+      console.error('错误详情:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+      alert('移除网站失败，请重试')
+    } else {
+      console.log('网站移除成功，已从数据库中删除')
+      // 从本地数组中移除该网站
+      const index = websites.value.findIndex(website => website.url === site.url)
+      if (index !== -1) {
+        websites.value.splice(index, 1)
+      }
+      // 重新加载网站数据以确保数据一致性
+      await loadWebsites()
+    }
+  } catch (error) {
+    console.error('移除网站异常:', error)
+    alert('移除网站失败，请重试')
+  }
+}
+
+// 防抖状态管理
+const debounceTimers = ref({})
+const loadingStates = ref({})
+
+// 防抖函数
+const debounce = (func, delay, key) => {
+  // 清除之前的定时器
+  if (debounceTimers.value[key]) {
+    clearTimeout(debounceTimers.value[key])
+  }
+  
+  // 设置新的定时器
+  return new Promise((resolve) => {
+    debounceTimers.value[key] = setTimeout(async () => {
+      try {
+        const result = await func()
+        resolve(result)
+      } catch (error) {
+        resolve(null)
+      }
+    }, delay)
   })
-  hideModal()
+}
+
+// 直接添加推荐网站（带防抖和异步优化）
+const addRecommendedSite = async (site) => {
+  const siteKey = site.url // 使用URL作为防抖标识
+  
+  // 如果正在加载中，直接返回
+  if (loadingStates.value[siteKey]) {
+    return
+  }
+  
+  // 设置加载状态
+  loadingStates.value[siteKey] = true
+  
+  try {
+    // 防抖处理，500ms内只执行一次
+    await debounce(async () => {
+      const categoryId = route.params.categoryId
+      
+      if (!categoryId) {
+        alert('无法添加网站：缺少分类ID')
+        return
+      }
+      
+      // 获取当前用户ID
+      const user = authStore.user
+      
+      if (!user) {
+        alert('请先登录后再添加网站')
+        return
+      }
+      
+      // 验证用户ID是否有效
+      const isValidUser = await validateUserId(user.id)
+      if (!isValidUser) {
+        alert('用户ID无效，请重新登录')
+        return
+      }
+      
+      // 更新Supabase认证头信息
+      updateSupabaseHeaders()
+      
+      // 首先通过category_templates的ID找到对应的user_category_mappings记录
+      const { data: mappingData, error: mappingError } = await supabase
+        .from('user_category_mappings')
+        .select('id, user_id')
+        .eq('template_id', categoryId)
+        .eq('user_id', user.id)
+        .single()
+      
+      if (mappingError || !mappingData) {
+        alert('无法添加网站：未找到对应的分类映射')
+        return
+      }
+      
+      // 准备插入的数据
+      const insertData = {
+        name: site.title,
+        url: site.url,
+        icon: site.icon || 'uil-globe',
+        category_mapping_id: mappingData.id,
+        user_id: user.id,
+        sort_order: websites.value.length + 1
+      }
+      
+      console.log('准备插入推荐网站到website_links表的数据:', insertData)
+      console.log('当前用户ID:', user.id)
+      console.log('category_mapping_id:', mappingData.id)
+      
+      // 第一步：先在前端展示，提升用户体验
+      const tempSite = {
+        id: 'temp_' + Date.now(), // 临时ID
+        name: site.title,
+        url: site.url,
+        icon: site.icon || 'uil-globe'
+      }
+      
+      // 立即添加到本地数组
+      websites.value.push(tempSite)
+      
+      // 第二步：异步保存到数据库
+      const { data, error } = await supabase.rpc('insert_website_link', {
+        p_name: insertData.name,
+        p_url: insertData.url,
+        p_icon: insertData.icon,
+        p_category_mapping_id: insertData.category_mapping_id,
+        p_user_id: insertData.user_id,
+        p_sort_order: insertData.sort_order
+      })
+      
+      if (error) {
+        console.error('添加推荐网站到数据库失败:', error)
+        console.error('错误详情:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
+        
+        // 如果数据库保存失败，移除临时数据
+        const index = websites.value.findIndex(s => s.id === tempSite.id)
+        if (index !== -1) {
+          websites.value.splice(index, 1)
+        }
+        
+        alert('添加网站失败，请重试')
+      } else {
+        console.log('推荐网站添加成功:', data)
+        
+        // 替换临时数据为真实数据
+        const tempIndex = websites.value.findIndex(s => s.id === tempSite.id)
+        if (tempIndex !== -1) {
+          websites.value[tempIndex] = {
+            id: data.id,
+            name: site.title,
+            url: site.url,
+            icon: site.icon || 'uil-globe'
+          }
+        }
+        
+        // 可选：重新加载数据确保一致性
+        setTimeout(async () => {
+          await loadWebsites()
+        }, 100)
+        
+        // 延迟关闭模态框，让用户看到添加成功的效果
+        setTimeout(() => {
+          hideModal()
+        }, 800)
+      }
+    }, 500, siteKey)
+    
+  } catch (error) {
+    console.error('添加推荐网站异常:', error)
+    alert('添加网站失败，请重试')
+  } finally {
+    // 清除加载状态
+    setTimeout(() => {
+      loadingStates.value[siteKey] = false
+    }, 600)
+  }
 }
 
 // 解析网站信息
@@ -316,10 +637,10 @@ const parseWebsite = () => {
       newSite.value.name = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1)
     }
     
-    // 设置默认图标URL
-    newSite.value.icon_url = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`
+    // 使用 favicon.im 服务获取网站图标
+    newSite.value.icon_url = `https://favicon.im/${hostname}?larger=true`
     
-    alert('网站信息解析完成！')
+    alert('网站信息解析完成！图标已加载，请查看预览效果。')
   } catch (error) {
     alert('URL格式不正确，请检查后重试')
   }
@@ -352,7 +673,8 @@ const resetIcon = () => {
   if (newSite.value.url) {
     try {
       const url = new URL(newSite.value.url)
-      newSite.value.icon_url = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`
+      const hostname = url.hostname.replace('www.', '')
+      newSite.value.icon_url = `https://favicon.im/${hostname}?larger=true`
     } catch (error) {
       newSite.value.icon_url = '/src/assets/smile.jpeg'
     }
@@ -367,14 +689,90 @@ const getDefaultIconUrl = () => {
 }
 
 // 添加网站
-const addWebsite = () => {
+const addWebsite = async () => {
   if (newSite.value.name && newSite.value.url) {
-    websites.value.push({
-      name: newSite.value.name,
-      url: newSite.value.url,
-      icon: 'uil-globe'
-    })
-    hideModal()
+    try {
+      const categoryId = route.params.categoryId
+      
+      if (!categoryId) {
+        alert('无法添加网站：缺少分类ID')
+        return
+      }
+      
+      // 获取当前用户ID
+      const user = authStore.user
+      
+      if (!user) {
+        alert('请先登录后再添加网站')
+        return
+      }
+      
+      // 验证用户ID是否有效
+      const isValidUser = await validateUserId(user.id)
+      if (!isValidUser) {
+        alert('用户ID无效，请重新登录')
+        return
+      }
+      
+      // 更新Supabase认证头信息
+      updateSupabaseHeaders()
+      
+      // 首先通过category_templates的ID找到对应的user_category_mappings记录
+      const { data: mappingData, error: mappingError } = await supabase
+        .from('user_category_mappings')
+        .select('id, user_id')
+        .eq('template_id', categoryId)
+        .eq('user_id', user.id)
+        .single()
+      
+      if (mappingError || !mappingData) {
+        alert('无法添加网站：未找到对应的分类映射')
+        return
+      }
+      
+      // 准备插入的数据
+      const insertData = {
+        name: newSite.value.name,
+        url: newSite.value.url,
+        icon: 'uil-globe',
+        category_mapping_id: mappingData.id,
+        user_id: user.id,
+        sort_order: websites.value.length + 1
+      }
+      
+      console.log('准备插入到website_links表的数据:', insertData)
+      console.log('当前用户ID:', user.id)
+      console.log('category_mapping_id:', mappingData.id)
+      
+      // 使用存储过程插入数据到数据库
+      const { data, error } = await supabase.rpc('insert_website_link', {
+        p_name: insertData.name,
+        p_url: insertData.url,
+        p_icon: insertData.icon,
+        p_category_mapping_id: insertData.category_mapping_id,
+        p_user_id: insertData.user_id,
+        p_sort_order: insertData.sort_order
+      })
+      
+      if (error) {
+        console.error('添加网站到数据库失败:', error)
+        console.error('错误详情:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
+        alert('添加网站失败，请重试')
+      } else {
+        console.log('网站添加成功:', data)
+        // 重新加载网站数据
+        await loadWebsites()
+        hideModal()
+      }
+    } catch (error) {
+      console.error('添加网站异常:', error)
+      alert('添加网站失败，请重试')
+    }
   } else {
     alert('请填写网站名称和URL')
   }
@@ -385,18 +783,236 @@ const handleIconError = (event) => {
   event.target.src = '/src/assets/smile.jpeg'
 }
 
+// 获取网站图标URL
+const getWebsiteIcon = (url) => {
+  if (!url) return '/src/assets/smile.jpeg'
+  
+  try {
+    const domain = new URL(url).hostname
+    return `https://favicon.im/${domain}?larger=true`
+  } catch (error) {
+    return '/src/assets/smile.jpeg'
+  }
+}
+
+// 处理网站图标加载错误
+const handleWebsiteIconError = (event) => {
+  event.target.src = '/src/assets/smile.jpeg'
+}
+
+// 显示删除按钮（3秒延迟）
+const showDeleteButton = (index) => {
+  // 清除之前的定时器
+  if (hoverTimers.value[index]) {
+    clearTimeout(hoverTimers.value[index])
+  }
+  
+  // 设置3秒后显示删除按钮
+  hoverTimers.value[index] = setTimeout(() => {
+    showDeleteIndex.value = index
+  }, 3000)
+}
+
+// 隐藏删除按钮
+const hideDeleteButton = (index) => {
+  // 清除定时器
+  if (hoverTimers.value[index]) {
+    clearTimeout(hoverTimers.value[index])
+    delete hoverTimers.value[index]
+  }
+  
+  // 立即隐藏删除按钮
+  if (showDeleteIndex.value === index) {
+    showDeleteIndex.value = -1
+  }
+}
+
+// 删除分类及其所有网站内容
+const deleteCategory = async () => {
+  const categoryId = route.params.categoryId
+  
+  if (!categoryId) {
+    alert('无法删除分类：缺少分类ID')
+    return
+  }
+  
+  if (!confirm(`确定要删除分类"${currentCategoryName.value}"及其所有网站内容吗？此操作不可撤销！`)) {
+    return
+  }
+  
+  try {
+    // 获取当前用户ID
+    const user = authStore.user
+    
+    if (!user) {
+      alert('请先登录后再操作')
+      return
+    }
+    
+    console.log('开始删除分类，categoryId:', categoryId, '用户ID:', user.id)
+    
+    // 验证用户ID是否有效
+    const isValidUser = await validateUserId(user.id)
+    if (!isValidUser) {
+      alert('用户ID无效，请重新登录')
+      return
+    }
+    
+    // 更新Supabase认证头信息
+    updateSupabaseHeaders()
+    
+    // 首先通过category_templates的ID找到对应的user_category_mappings记录
+    const { data: mappingData, error: mappingError } = await supabase
+      .from('user_category_mappings')
+      .select('id, user_id')
+      .eq('template_id', categoryId)
+      .eq('user_id', user.id)
+      .single()
+    
+    if (mappingError || !mappingData) {
+      alert('无法删除分类：未找到对应的分类映射')
+      return
+    }
+    
+    console.log('找到用户分类映射:', mappingData)
+    
+    // 先删除该分类下的所有网站内容
+    console.log('开始删除分类下的所有网站内容，category_mapping_id:', mappingData.id)
+    
+    // 使用存储过程删除该分类下的所有网站记录
+    const { error: deleteWebsitesError } = await supabase.rpc('delete_website_links_by_category', {
+      p_category_mapping_id: mappingData.id,
+      p_user_id: user.id
+    })
+    
+    if (deleteWebsitesError) {
+      console.error('删除网站内容失败:', deleteWebsitesError)
+      console.error('错误详情:', {
+        code: deleteWebsitesError.code,
+        message: deleteWebsitesError.message,
+        details: deleteWebsitesError.details,
+        hint: deleteWebsitesError.hint
+      })
+      // 继续尝试删除分类映射，不中断流程
+    } else {
+      console.log('分类下的所有网站内容删除成功')
+    }
+    
+    // 删除用户分类映射记录
+    console.log('开始删除用户分类映射记录，mapping_id:', mappingData.id)
+    
+    // 使用存储过程删除用户分类映射
+    const { error: deleteMappingError } = await supabase.rpc('delete_user_category_mapping', {
+      p_id: mappingData.id,
+      p_user_id: user.id
+    })
+    
+    if (deleteMappingError) {
+      console.error('删除用户分类映射失败:', deleteMappingError)
+      console.error('错误详情:', {
+        code: deleteMappingError.code,
+        message: deleteMappingError.message,
+        details: deleteMappingError.details,
+        hint: deleteMappingError.hint
+      })
+      throw deleteMappingError
+    }
+    
+    console.log('分类删除成功')
+    alert('分类删除成功！')
+    
+    // 跳转到首页
+    router.push('/')
+    
+  } catch (error) {
+    console.error('删除分类异常:', error)
+    alert('删除分类失败，请重试')
+  }
+}
+
+// 删除网站 - 直接删除数据库记录
+const deleteWebsite = async (siteId, index) => {
+  if (!confirm('确定要删除这个网站吗？')) {
+    return
+  }
+  
+  try {
+    // 获取当前用户ID
+    const user = authStore.user
+    
+    if (!user) {
+      alert('请先登录后再操作')
+      return
+    }
+    
+    console.log('开始删除网站，siteId:', siteId, '用户ID:', user.id)
+    
+    // 验证用户ID是否有效
+    const isValidUser = await validateUserId(user.id)
+    if (!isValidUser) {
+      alert('用户ID无效，请重新登录')
+      return
+    }
+    
+    // 更新Supabase认证头信息
+    updateSupabaseHeaders()
+    
+    // 直接删除数据库中的网站记录 - 使用存储过程绕过RLS
+    console.log('执行删除操作，条件: id=', siteId, 'user_id=', user.id)
+    
+    // 使用存储过程删除网站记录
+    const { error } = await supabase.rpc('delete_website_link', {
+      p_id: siteId,
+      p_user_id: user.id
+    })
+    
+    if (error) {
+      console.error('存储过程删除失败:', error)
+      console.error('错误详情:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+      throw error
+    }
+    
+    if (error) {
+      console.error('删除网站失败:', error)
+      console.error('错误详情:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+      alert('删除网站失败，请重试')
+    } else {
+      console.log('网站删除成功，已从数据库中删除')
+      // 从本地数组中移除该网站
+      websites.value.splice(index, 1)
+      // 重新加载网站数据以确保数据一致性
+      await loadWebsites()
+    }
+  } catch (error) {
+    console.error('删除网站异常:', error)
+    alert('删除网站失败，请重试')
+  }
+}
+
 // 监听路由参数变化
 import { watch } from 'vue'
 
-watch(() => route.params.categoryId, (newCategoryId) => {
+watch(() => route.params.categoryId, async (newCategoryId) => {
   console.log('路由参数变化，新的categoryId:', newCategoryId)
-  loadCategoryName()
+  await loadCategoryName()
+  await loadWebsites()
 })
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
   console.log('分类页面加载完成')
-  loadCategoryName()
+  await loadCategoryName()
+  await loadWebsites()
   console.log('路由参数 categoryId:', route.params.categoryId)
   console.log('推荐网站数据:', recommendedSites.value)
 })
@@ -404,10 +1020,11 @@ onMounted(() => {
 
 <style scoped>
 .classify-container {
-  min-height: 100vh;
+  height: 100vh; /* 固定高度为视口高度 */
   background: #f8f9fa;
   font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
   display: flex;
+  overflow: hidden; /* 隐藏溢出内容 */
 }
 
 /* 主内容区域 */
@@ -415,6 +1032,7 @@ onMounted(() => {
   flex: 1;
   padding: 20px;
   margin-left: 60px; /* 导航栏宽度 */
+  overflow: hidden; /* 隐藏溢出内容 */
 }
 
 /* 顶部标题区域 */
@@ -424,6 +1042,9 @@ onMounted(() => {
   margin-left: auto;
   margin-right: auto;
   padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .page-title {
@@ -433,84 +1054,154 @@ onMounted(() => {
   margin: 0;
 }
 
+/* 删除分类按钮 */
+.delete-category-btn {
+  background: #ff6b6b;
+  border: none;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 18px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.delete-category-btn:hover {
+  background: #ff5252;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
 /* 主要内容卡片 */
 .content-card {
   background: white;
   border-radius: 20px;
-  padding: 24px;
+  padding: 20px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-  min-height: 500px;
+  height: calc(100vh - 100px); /* 自适应高度，减去顶部间距 */
   max-width: 1200px;
-  margin: 10px auto 0;
+  margin: -10px auto 0;
 }
 
-/* 网格布局 */
+/* 网格布局 - 固定结构 */
 .grid-container {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 60px; /* 图标之间的间距 */
-  margin: 20px 60px;
+  /* 固定列数（6列），每列等宽 */
+  grid-template-columns: repeat(6, 1fr); 
+  /* 列与列、行与行之间的间距 */
+  row-gap: 30px; /* 上下间距减少5px */
+  column-gap: 40px; /* 左右间距保持不变 */
+  /* 水平方向居中，剩余空间分布在两侧 */
+  justify-content: center; 
+  /* 垂直方向顶部对齐，数据少的时候保持顶部布局 */
+  align-content: flex-start; 
+  margin: 20px 30px; /* 减少左右边距 */
+  /* 确保网格项不会因为内容挤压而变形 */
+  height: calc(100% - 40px); /* 自适应高度 */
+  overflow: hidden; /* 去掉滚动条 */
 }
 
-/* 网站项：包含图标和文字 */
+/* 网站项：固定尺寸，确保布局稳定 */
 .website-item {
   position: relative;
   cursor: pointer;
-  aspect-ratio: 1; /* 保持正方形比例 */
+  /* 整体格子尺寸 */
+  width: 120px;
+  height: 150px; /* 增加高度为文字区域留空间 */
 }
 
-/* 图标盒子：仅承载图标 */
+/* 图标盒子：正方形区域 */
 .website-icon-box {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  width: 120px;
+  height: 120px; /* 正方形区域 */
+  border: 1px solid #e0e0e0; /* 添加边框显示网格结构 */
+  border-radius: 16px; /* 增加圆角，让圆角更圆 */
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  margin-bottom: 8px; /* 图标和文字之间的间距 */
+  overflow: hidden; /* 防止图标溢出 */
+  background: #f8f9fa; /* 添加背景色 */
 }
 
-.website-icon-box i {
-  font-size: 24px;
-  color: white;
+/* 网站图标图片样式 */
+.website-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 让图标铺满整个格子 */
+  border-radius: 14px; /* 增加圆角，与容器保持一致 */
 }
 
-.website-item:hover .website-icon-box {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* 文字：绝对定位在图标正下方 */
-.website-name {
+/* 删除按钮样式 */
+.delete-btn {
   position: absolute;
-  top: calc(100% + 8px); /* 图标底部 + 间距 */
-  left: 50%;
-  transform: translateX(-50%);
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #ff6b6b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   font-size: 12px;
-  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.delete-btn:hover {
+  background: #ff6b6b;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* 网站图标盒子添加相对定位 */
+.website-icon-box {
+  position: relative;
+}
+
+/* 文字：简化样式 - 居中显示 */
+.website-name {
+  font-size: 12px;
+  color: #666;
   font-weight: 500;
   white-space: nowrap; /* 防止文字换行 */
   text-align: center;
+  width: 100%; /* 确保宽度为100% */
+  display: block; /* 块级元素确保居中 */
 }
 
-/* 添加按钮项 */
+/* 添加按钮项 - 固定在最后一个位置，固定尺寸 */
 .add-item {
   position: relative;
   cursor: pointer;
+  order: 9999; /* 确保始终在最后 */
+  /* 整体格子尺寸 */
+  width: 120px;
+  height: 150px; /* 增加高度为文字区域留空间 */
 }
 
-/* 添加按钮的图标盒子 */
+/* 添加按钮的图标盒子 - 保持正方形 */
 .add-icon-box {
-  width: 100%;
-  height: 100%;
   background: #e9ecef;
   border: 2px dashed #adb5bd;
-  border-radius: 12px;
+  border-radius: 16px; /* 增加圆角，让圆角更圆 */
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+  width: 120px; /* 正方形区域 */
+  height: 120px; /* 正方形区域 */
+  margin-bottom: 8px; /* 图标和文字之间的间距 */
 }
 
 .add-icon-box i {
@@ -524,17 +1215,15 @@ onMounted(() => {
   transform: translateY(-2px);
 }
 
-/* 添加按钮的文字 */
+/* 添加按钮的文字 - 居中显示 */
 .add-name {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
   font-size: 12px;
   color: #6c757d;
   font-weight: 500;
   white-space: nowrap;
   text-align: center;
+  width: 100%; /* 确保宽度为100% */
+  display: block; /* 块级元素确保居中 */
 }
 
 /* 模态框样式 */
@@ -742,6 +1431,37 @@ onMounted(() => {
 .add-site-btn:hover {
   background: #5a6fd8;
   transform: scale(1.1);
+}
+
+/* 移除按钮样式 */
+.remove-btn {
+  background: #ff6b6b !important;
+}
+
+.remove-btn:hover {
+  background: #ff5252 !important;
+}
+
+/* 加载状态按钮样式 */
+.loading-btn {
+  background: #adb5bd !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+.loading-btn:hover {
+  background: #adb5bd !important;
+  transform: none !important;
+}
+
+/* 旋转动画 */
+.uil-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* 自定义网站内容样式 - 仿照Community.vue样式 */

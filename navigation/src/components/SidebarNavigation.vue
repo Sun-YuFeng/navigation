@@ -13,7 +13,6 @@ const authStore = useAuthStore()
 const fixedCategories = ref([
   { id: 'home', name: '首页', icon: 'uil-home', route: '/' },
   { id: 'community', name: '社区', icon: 'uil-users-alt', route: '/community' },
-  { id: 'media', name: '媒体', icon: 'uil-play-circle', route: '/classify/media' },
 ])
 
 // 用户自定义分类
@@ -94,7 +93,6 @@ const loadUserAvatar = async () => {
       
       if (!profileError && profileData?.avatar_url) {
         userAvatar.value = profileData.avatar_url
-        console.log('从user_profiles表加载头像成功:')
       } else {
         // 如果user_profiles表没有头像，再查询users表
         const { data: userData, error: userError } = await supabase
@@ -105,15 +103,14 @@ const loadUserAvatar = async () => {
         
         if (!userError && userData?.avatar_url) {
           userAvatar.value = userData.avatar_url
-          console.log('从users表加载头像成功:', userData.avatar_url)
         } else {
-          console.log('未找到用户头像，使用默认头像')
+          // 未找到用户头像，使用默认头像
         }
       }
     } catch (error) {
       console.error('加载用户头像失败:', error)
       // 如果查询失败，使用默认头像
-      userAvatar.value = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iIzAwN2JmZiIvPgo8Y2lyY2xlIGN4PSIxNiIgY3k9IjEyIiByPSI0IiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMTYgMjRDMjAgMjQgMjQgMjIgMjQgMThIMEMwLjAwMSAyMiA0IDI0IDE2IDI0WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+'
+      userAvatar.value = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwMDdiZmYiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxMiIgcj0iNCIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE2IDI0QzIwIDI0IDI0IDIyIDI0IDE4SDBDMC4wMDEgMjIgNCAyNCAxNiAyNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg=='
     }
   }
 }
@@ -152,8 +149,19 @@ const navigateTo = (route) => {
 <template>
   <!-- 左侧导航条 -->
   <nav class="sidebar">
-    <!-- 顶部区域 - 固定分类 -->
+    <!-- 顶部区域 - 用户头像 -->
     <div class="top-section">
+      <!-- 用户头像 -->
+      <div class="nav-item avatar-item" @click="openProfileCard">
+        <div class="avatar-container">
+          <img :src="userAvatar" alt="用户头像" class="avatar" />
+        </div>
+        <span class="tooltip">个人资料</span>
+      </div>
+    </div>
+
+    <!-- 固定分类区域 -->
+    <div class="fixed-categories-section">
       <div 
         v-for="category in fixedCategories" 
         :key="category.id" 
@@ -190,14 +198,6 @@ const navigateTo = (route) => {
 
     <!-- 底部区域 -->
     <div class="bottom-section">
-      <!-- 用户头像 -->
-      <div class="nav-item avatar-item" @click="openProfileCard">
-        <div class="avatar-container">
-          <img :src="userAvatar" alt="用户头像" class="avatar" />
-        </div>
-        <span class="tooltip">个人资料</span>
-      </div>
-
       <!-- 设置图标 -->
       <div class="nav-item" @click="openSettings">
         <i class="uil uil-cog"></i>
@@ -227,14 +227,21 @@ const navigateTo = (route) => {
   top: 0;
   height: 100vh;
   z-index: 1000;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .top-section {
   display: flex;
   flex-direction: column;
   gap: 25px;
-  margin-top: 20px;
+  margin-bottom: 30px;
+}
+
+.fixed-categories-section {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  margin-bottom: 20px;
 }
 
 .user-categories-section {
@@ -249,7 +256,7 @@ const navigateTo = (route) => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  margin: 10px 0;
+  margin: 20px 0;
 }
 
 .bottom-section {

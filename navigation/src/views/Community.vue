@@ -70,7 +70,7 @@
         
         <!-- 网站分享广场 -->
         <div class="website-share-section">
-          <WebsiteShareSquare />
+          <WebsiteShareSquare :personal-links="customLinks" />
         </div>
         
         <!-- 10个类别的导航卡片 -->
@@ -86,8 +86,8 @@
         </div>
         
         <!-- 添加链接模态框 -->
-        <div v-if="showAddLinkModal" class="modal-overlay" @click="showAddLinkModal = false">
-          <div class="modal-content" @click.stop>
+        <div v-if="showAddLinkModal" class="modal-overlay">
+          <div class="modal-content">
             <div class="modal-header">
               <h3>新增链接</h3>
               <button @click="showAddLinkModal = false" class="modal-close-btn">×</button>
@@ -180,7 +180,7 @@ import SidebarNavigation from '../components/SidebarNavigation.vue'
 import ProgrammingTools from '../components/ProgrammingTools.vue'
 import WebsiteShareSquare from '../components/WebsiteShareSquare.vue'
 import { getAllCategories } from '../utils/categoryData'
-import { supabase } from '../supabase'
+import { supabase, updateSupabaseHeaders, validateUserId } from '../supabase.js'
 import { useAuthStore } from '../stores/auth.js'
 
 // 模态框显示状态
@@ -244,17 +244,27 @@ onMounted(async () => {
 const loadCustomLinks = async () => {
   if (!currentUser.value) return;
   
-  const { data, error } = await supabase
-    .from('personal_navigation')
-    .select('*')
-    .eq('user_id', currentUser.value.id)
-    .order('created_at', { ascending: true })
-  
-  if (!error && data) {
-    customLinks.value = data.map(link => ({
-      ...link,
-      desc: link.website_description
-    }))
+  try {
+    // 更新Supabase认证头信息
+    updateSupabaseHeaders()
+    
+    // 直接查询个人导航链接表（RLS策略已禁用）
+    const { data, error } = await supabase
+      .from('personal_navigation')
+      .select('*')
+      .eq('user_id', currentUser.value.id)
+      .order('created_at', { ascending: true })
+    
+    if (!error && data) {
+      customLinks.value = data.map(link => ({
+        ...link,
+        desc: link.website_description
+      }))
+    } else {
+      console.error('加载自定义链接失败:', error)
+    }
+  } catch (error) {
+    console.error('加载自定义链接异常:', error)
   }
 }
 
@@ -276,35 +286,44 @@ const addCustomLink = async () => {
                          newLink.value.icon_url.startsWith('blob:') ? 
                          newLink.value.icon_url : null;
     
-    // 保存到personal_navigation表
-    const { data, error } = await supabase
-      .from('personal_navigation')
-      .insert([{
-        user_id: currentUser.value.id,
-        website_url: newLink.value.url,
-        website_name: newLink.value.name,
-        website_description: newLink.value.description,
-        custom_icon_url: customIconUrl
-      }])
-      .select()
-    
-    if (!error && data) {
-      // 添加到本地列表
-      const newLinkData = data[0]
-      customLinks.value.push({
-        ...newLinkData,
-        desc: newLinkData.website_description
-      })
+    try {
+      // 更新Supabase认证头信息
+      updateSupabaseHeaders()
       
-      // 重置表单
-      newLink.value = { 
-        name: '', 
-        url: '', 
-        description: '',
-        icon_url: '/src/assets/smile.jpeg'
-      };
-      showAddLinkModal.value = false;
-    } else {
+      // 直接插入数据到数据库（RLS策略已禁用）
+      const { data, error } = await supabase
+        .from('personal_navigation')
+        .insert({
+          user_id: currentUser.value.id,
+          website_url: newLink.value.url,
+          website_name: newLink.value.name,
+          website_description: newLink.value.description,
+          custom_icon_url: customIconUrl
+        })
+        .select()
+      
+      if (!error && data && data.length > 0) {
+        // 添加到本地列表
+        const newLinkData = data[0]
+        customLinks.value.push({
+          ...newLinkData,
+          desc: newLinkData.website_description
+        })
+        
+        // 重置表单
+        newLink.value = { 
+          name: '', 
+          url: '', 
+          description: '',
+          icon_url: '/src/assets/smile.jpeg'
+        };
+        showAddLinkModal.value = false;
+      } else {
+        console.error('保存自定义链接失败:', error)
+        alert('保存失败，请重试')
+      }
+    } catch (error) {
+      console.error('保存自定义链接异常:', error)
       alert('保存失败，请重试')
     }
   }
@@ -318,14 +337,30 @@ const removeCustomLink = async (index) => {
     return
   }
   
-  const { error } = await supabase
-    .from('personal_navigation')
-    .delete()
-    .eq('id', link.id)
+  if (!currentUser.value) {
+    alert('请先登录')
+    return
+  }
   
-  if (!error) {
-    customLinks.value.splice(index, 1)
-  } else {
+  try {
+    // 更新Supabase认证头信息
+    updateSupabaseHeaders()
+    
+    // 直接删除数据（RLS策略已禁用）
+    const { error } = await supabase
+      .from('personal_navigation')
+      .delete()
+      .eq('id', link.id)
+      .eq('user_id', currentUser.value.id)
+    
+    if (!error) {
+      customLinks.value.splice(index, 1)
+    } else {
+      console.error('删除自定义链接失败:', error)
+      alert('删除失败，请重试')
+    }
+  } catch (error) {
+    console.error('删除自定义链接异常:', error)
     alert('删除失败，请重试')
   }
 }
@@ -590,7 +625,7 @@ const handleIconError = (event, link) => {
 
 .custom-links-container {
   max-width: 1200px;
-  height: 240px;
+  height: 280px; /* 增加高度减少下方留白 */
   margin: 0 auto;
   background-color: #fff;
   border-radius: 8px;
@@ -603,7 +638,7 @@ const handleIconError = (event, link) => {
 .cards-wrapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 8px 4px; /* 水平间距8px，垂直间距4px */
   height: calc(100% - 40px); /* 减去标题高度和间距 */
   overflow-y: auto; /* 允许滚动 */
 }
@@ -617,7 +652,7 @@ const handleIconError = (event, link) => {
   border-radius: 5px;
   padding: 8px;
   transition: all 0.3s ease;
-  height: 50px; /* 固定卡片高度 */
+  height: 55px; /* 固定卡片高度，增加5px避免描述被遮挡 */
   overflow: hidden;
   position: relative;
   cursor: pointer;

@@ -89,6 +89,24 @@ export const useAuthStore = defineStore('auth', () => {
         email: `${username}@example.com`
       })
     
+    // 为每个新用户创建默认的媒体分类映射
+    const { data: mediaCategory } = await supabase
+      .from('category_templates')
+      .select('id')
+      .eq('name', '媒体')
+      .eq('is_default', true)
+      .single()
+    
+    if (mediaCategory) {
+      await supabase
+        .from('user_category_mappings')
+        .insert({
+          user_id: data.id,
+          template_id: mediaCategory.id,
+          sort_order: 0
+        })
+    }
+    
     const userData = {
       id: data.id,
       username: data.username,

@@ -12,9 +12,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.75.1",
+    "@ckeditor/ckeditor5-build-classic": "^39.0.2",
+    "@ckeditor/ckeditor5-upload": "^47.1.0",
     "@iconscout/unicons": "^4.0.10",
+    "@supabase/supabase-js": "^2.75.1",
     "pinia": "^3.0.3",
+    "vditor": "^3.11.2",
     "vue": "^3.5.22",
     "vue-analog-clock": "^1.0.2",
     "vue-router": "^4.5.1",

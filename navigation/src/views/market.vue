@@ -25,7 +25,7 @@
       
       <!-- 右侧：操作按钮 -->
       <div class="header-right">
-        <button class="publish-btn">
+        <button class="publish-btn" @click="handlePublish">
           <i class="uil uil-plus"></i>
           发布
         </button>
@@ -376,8 +376,11 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import WorkflowCard from '@/components/WorkflowCard.vue'
 import CompactCard from '@/components/CompactCard.vue'
+
+const router = useRouter()
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -624,6 +627,12 @@ const handleViewAllTopics = () => {
   console.log('查看全部话题')
   // 这里可以添加跳转到话题列表页面的逻辑
   // 例如：router.push('/topics')
+}
+
+// 处理发布按钮点击
+const handlePublish = () => {
+  console.log('点击发布按钮，跳转到编辑页面')
+  router.push('/edit')
 }
 </script>
 

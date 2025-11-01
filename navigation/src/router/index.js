@@ -5,6 +5,7 @@ import SettingsView from '../views/Settings.vue'
 import CommunityView from '../views/Community.vue'
 import ClassifyView from '../views/Classify.vue'
 import MarketView from '../views/market.vue'
+import EditView from '../views/edit.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,6 +45,12 @@ const router = createRouter({
       component: ClassifyView,
       meta: { requiresAuth: true },
       props: true
+    },
+    {
+      path: '/edit',
+      name: 'edit',
+      component: EditView,
+      meta: { requiresAuth: true }
     },
   ],
 })

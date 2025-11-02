@@ -124,11 +124,11 @@ onMounted(() => {
 
 
 .main-content {
-  margin-left: 60px;
+  margin-left: 50px;
   padding: 40px;
   background-color: white;
   min-height: 100vh;
-  width: calc(100% - 60px);
+  width: calc(100% - 50px);
 }
 
 .settings-header {

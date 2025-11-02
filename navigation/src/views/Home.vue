@@ -452,9 +452,9 @@ onMounted(() => {
 }
 
 .main-content {
-  margin-left: 60px;
+  margin-left: 50px;
   padding: 20px;
-  width: calc(100% - 60px);
+  width: calc(100% - 50px);
   min-height: 100vh;
 }
 

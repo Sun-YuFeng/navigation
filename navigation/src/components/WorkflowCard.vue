@@ -1,5 +1,5 @@
 <template>
-  <div class="card">
+  <div class="card" @click="handleCardClick">
     <!-- 用户信息区域 -->
     <div class="user-info">
       <div class="user-left">
@@ -113,7 +113,7 @@ const props = defineProps({
 })
 
 // 定义组件事件
-const emit = defineEmits(['like', 'favorite', 'comment', 'detail'])
+const emit = defineEmits(['like', 'favorite', 'comment', 'detail', 'cardClick'])
 
 // 图标状态管理
 const isLiked = ref(false)
@@ -139,6 +139,13 @@ const handleComment = () => {
 const handleDetail = (e) => {
   e.preventDefault()
   emit('detail')
+}
+
+// 处理卡片点击事件
+const handleCardClick = (e) => {
+  // 阻止事件冒泡，避免与内部按钮点击冲突
+  e.stopPropagation()
+  emit('cardClick')
 }
 </script>
 

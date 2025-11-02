@@ -1,5 +1,5 @@
 <template>
-  <div class="card" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
+  <div class="card" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave" @click="handleCardClick">
     <div class="card-container">
       <!-- 左侧图片区域 -->
       <div class="card-left">
@@ -99,7 +99,7 @@ const props = defineProps({
 })
 
 // 定义组件事件
-const emit = defineEmits(['like', 'favorite', 'comment', 'detail'])
+const emit = defineEmits(['like', 'favorite', 'comment', 'detail', 'cardClick'])
 
 // 鼠标悬停状态
 const isHovered = ref(false)
@@ -128,6 +128,13 @@ const handleMouseEnter = () => {
 
 const handleMouseLeave = () => {
   isHovered.value = false
+}
+
+// 处理卡片点击事件
+const handleCardClick = (e) => {
+  // 阻止事件冒泡，避免与内部按钮点击冲突
+  e.stopPropagation()
+  emit('cardClick')
 }
 </script>
 

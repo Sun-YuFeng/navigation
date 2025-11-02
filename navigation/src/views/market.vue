@@ -231,6 +231,7 @@
                 @favorite="(newFavorites) => handleCardFavorite(item.id, newFavorites)"
                 @comment="() => handleCardComment(item.id)"
                 @detail="() => handleCardDetail(item.id)"
+                @card-click="() => handleCardClick(item.id)"
               />
             </div>
 
@@ -253,6 +254,7 @@
                 @favorite="(newFavorites) => handleCardFavorite(item.id, newFavorites)"
                 @comment="() => handleCardComment(item.id)"
                 @detail="() => handleCardDetail(item.id)"
+                @card-click="() => handleCardClick(item.id)"
               />
             </div>
           </div>
@@ -312,62 +314,10 @@
           </div>
 
           <!-- 热门话题卡片 -->
-          <div class="topic-card sticky-card">
-            <div class="topic-header">
-              <i class="uil uil-fire"></i>
-              <h3>热门话题</h3>
-            </div>
-            <ul class="topic-list">
-              <li class="divider">
-                <div>
-                  <span class="rank-tag top1">TOP 1</span>
-                  AI工作流自动化最佳实践
-                </div>
-                <span class="view-count">
-                  <i class="uil uil-eye"></i> 12.5k
-                </span>
-              </li>
-              <li class="divider">
-                <div>
-                  <span class="rank-tag other">TOP 2</span>
-                  n8n vs Zapier性能对比
-                </div>
-                <span class="view-count">
-                  <i class="uil uil-eye"></i> 9.8k
-                </span>
-              </li>
-              <li class="divider">
-                <div>
-                  <span class="rank-tag other">TOP 3</span>
-                  企业级自动化解决方案
-                </div>
-                <span class="view-count">
-                  <i class="uil uil-eye"></i> 7.3k
-                </span>
-              </li>
-              <li class="divider">
-                <div>低代码平台发展趋势</div>
-                <span class="view-count">
-                  <i class="uil uil-eye"></i> 6.1k
-                </span>
-              </li>
-              <li class="divider">
-                <div>智能体应用场景分析</div>
-                <span class="view-count">
-                  <i class="uil uil-eye"></i> 5.4k
-                </span>
-              </li>
-              <li>
-                <div>数据自动化处理技巧</div>
-                <span class="view-count">
-                  <i class="uil uil-eye"></i> 4.9k
-                </span>
-              </li>
-            </ul>
-            <div class="view-all" @click="handleViewAllTopics">
-              查看全部 <i class="uil uil-angle-right"></i>
-            </div>
-          </div>
+          <HotTopicsCard 
+            @topic-click="handleTopicClick"
+            @view-all="handleViewAllTopics"
+          />
         </div>
       </div>
     </div>
@@ -379,6 +329,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import WorkflowCard from '@/components/WorkflowCard.vue'
 import CompactCard from '@/components/CompactCard.vue'
+import HotTopicsCard from '@/components/HotTopicsCard.vue'
 
 const router = useRouter()
 
@@ -594,6 +545,12 @@ const handleCardComment = (cardId) => {
 
 const handleCardDetail = (cardId) => {
   console.log(`查看卡片 ${cardId} 的详情`)
+}
+
+// 处理卡片点击事件 - 跳转到详情页
+const handleCardClick = (cardId) => {
+  console.log(`点击卡片 ${cardId}，跳转到详情页`)
+  router.push('/detail')
 }
 
 // 处理热门推荐项点击

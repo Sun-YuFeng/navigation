@@ -1028,7 +1028,7 @@ onMounted(async () => {
 .main-content {
   flex: 1;
   padding: 20px;
-  margin-left: 60px; /* 导航栏宽度 */
+  margin-left: 50px; /* 导航栏宽度，减少10px */
   overflow: hidden; /* 隐藏溢出内容 */
 }
 

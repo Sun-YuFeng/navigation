@@ -68,7 +68,7 @@ body {
 
 .main-content {
   flex: 1;
-  margin-left: 60px; /* 与侧边栏宽度一致 */
+  margin-left: 50px; /* 与侧边栏宽度一致，减少10px */
   min-height: 100vh;
   transition: margin-left 0.3s ease;
 }

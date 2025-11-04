@@ -16,6 +16,43 @@
         </div>
       </div>
     </div>
+
+    <!-- 封面选择弹窗 -->
+    <div v-if="showCoverModal" class="modal-overlay" @click="handleCoverModalOverlayClick">
+      <div class="modal-content cover-modal" @click.stop>
+        <div class="modal-header">
+          <h3>要添加封面吗？</h3>
+          <button class="modal-close" @click="closeCoverModal">×</button>
+        </div>
+        <div class="modal-body">
+          <!-- 上传步骤 -->
+          <div v-if="coverUploadStep === 'upload'" class="cover-upload-step">
+            <div class="cover-upload-area" @click="triggerCoverUpload">
+              <div class="upload-icon">
+                <i class="uil uil-image-upload"></i>
+              </div>
+              <p>点击上传封面图片</p>
+              <p class="upload-hint">支持JPG、PNG、GIF、WebP、BMP格式，建议尺寸16:9</p>
+              <input type="file" ref="coverFileInput" accept="image/jpg,image/png,image/jpeg,image/gif,image/webp,image/bmp" style="display: none;" @change="handleCoverFileSelect">
+            </div>
+          </div>
+          
+          <!-- 预览步骤 -->
+          <div v-if="coverUploadStep === 'preview'" class="cover-preview-step">
+            <div class="cover-preview">
+              <img :src="coverImagePreview" alt="封面预览" />
+            </div>
+            <p class="preview-hint">封面预览</p>
+            <button class="change-cover-btn" @click="resetCoverUpload">重新选择</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button v-if="coverUploadStep === 'upload'" class="modal-btn modal-btn-cancel" @click="skipCover">跳过，不用封面</button>
+          <button v-if="coverUploadStep === 'preview'" class="modal-btn modal-btn-primary" @click="confirmCover">确认封面并发布</button>
+          <button v-if="coverUploadStep === 'upload'" class="modal-btn modal-btn-primary" :disabled="!coverImagePreview" @click="nextStep">下一步</button>
+        </div>
+      </div>
+    </div>
     
     <div class="container">
       <!-- 左栏：配置项区域 -->
@@ -37,15 +74,56 @@
           </div>
         </div>
 
-        <h2>发布配置</h2>
-        <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
+        <h2 style="font-size: 18px; margin-bottom: 15px;">发布配置</h2>
         
         <div class="form-group">
-          <label>内容类型</label>
-          <div class="radio-group">
-            <label><input type="radio" v-model="formData.contentType" value="工作流" checked> 工作流</label>
-            <label><input type="radio" v-model="formData.contentType" value="智能体"> 智能体</label>
-            <label><input type="radio" v-model="formData.contentType" value="教程"> 教程</label>
+          <div class="content-type-hint">
+            <span>内容类型</span>
+          </div>
+          
+          <!-- 工作流 -->
+          <div class="collapsible-section" :class="{ collapsed: collapsedSections.workflow }">
+            <div class="collapsible-header" @click="toggleSection('workflow')">
+              <label>工作流</label>
+              <span class="collapse-icon">{{ collapsedSections.workflow ? '▶' : '▼' }}</span>
+            </div>
+            <div class="collapsible-content" v-if="!collapsedSections.workflow">
+              <div class="radio-group">
+                <label><input type="radio" v-model="formData.contentType" value="自动化工作流"> 自动化工作流</label>
+                <label><input type="radio" v-model="formData.contentType" value="手动协作流"> 手动协作流</label>
+                <label><input type="radio" v-model="formData.contentType" value="跨工具集成流"> 跨工具集成流</label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 智能体 -->
+          <div class="collapsible-section" :class="{ collapsed: collapsedSections.agent }">
+            <div class="collapsible-header" @click="toggleSection('agent')">
+              <label>智能体</label>
+              <span class="collapse-icon">{{ collapsedSections.agent ? '▶' : '▼' }}</span>
+            </div>
+            <div class="collapsible-content" v-if="!collapsedSections.agent">
+              <div class="radio-group">
+                <label><input type="radio" v-model="formData.contentType" value="AI助手型"> AI助手型</label>
+                <label><input type="radio" v-model="formData.contentType" value="数据处理型"> 数据处理型</label>
+                <label><input type="radio" v-model="formData.contentType" value="决策支持型"> 决策支持型</label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 教程 -->
+          <div class="collapsible-section" :class="{ collapsed: collapsedSections.tutorial }">
+            <div class="collapsible-header" @click="toggleSection('tutorial')">
+              <label>教程</label>
+              <span class="collapse-icon">{{ collapsedSections.tutorial ? '▶' : '▼' }}</span>
+            </div>
+            <div class="collapsible-content" v-if="!collapsedSections.tutorial">
+              <div class="radio-group">
+                <label><input type="radio" v-model="formData.contentType" value="工具入门"> 工具入门</label>
+                <label><input type="radio" v-model="formData.contentType" value="场景案例"> 场景案例</label>
+                <label><input type="radio" v-model="formData.contentType" value="故障排查"> 故障排查</label>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -56,50 +134,128 @@
 
         <div class="form-group">
           <label>所属平台 <span class="required-mark">*</span></label>
-          <div class="checkbox-group">
-            <label><input type="checkbox" v-model="formData.platforms" value="n8n"> n8n</label>
-            <label><input type="checkbox" v-model="formData.platforms" value="Zapier"> Zapier</label>
-            <label><input type="checkbox" v-model="formData.platforms" value="Make"> Make</label>
-            <label><input type="checkbox" v-model="formData.platforms" value="扣子"> 扣子</label>
+          <div class="checkbox-group platform-grid">
+            <div v-for="platform in filteredPlatforms" :key="platform" class="platform-item">
+              <label><input type="checkbox" v-model="formData.platforms" :value="platform"> {{ platform }}</label>
+            </div>
+            <div v-if="filteredPlatforms.length === 0" class="no-platforms">
+              <p>请先选择内容类型</p>
+            </div>
           </div>
         </div>
 
         <div class="form-group">
-          <label>应用场景</label>
-          <div class="checkbox-group">
-            <label><input type="checkbox" v-model="formData.scenes" value="办公自动化"> 办公自动化</label>
-            <label><input type="checkbox" v-model="formData.scenes" value="数据处理"> 数据处理</label>
-            <label><input type="checkbox" v-model="formData.scenes" value="内容创作"> 内容创作</label>
-            <label><input type="checkbox" v-model="formData.scenes" value="开发工具"> 开发工具</label>
-            <label><input type="checkbox" v-model="formData.scenes" value="生活服务"> 生活服务</label>
+          <div class="collapsible-section" :class="{ collapsed: collapsedSections.scenes }">
+            <div class="collapsible-header" @click="toggleSection('scenes')">
+              <label>应用场景</label>
+              <span class="collapse-icon">{{ collapsedSections.scenes ? '▶' : '▼' }}</span>
+            </div>
+            <div class="collapsible-content" v-if="!collapsedSections.scenes">
+              <div class="scene-hint">
+                <span class="hint-icon">💡</span>
+                <span>选择适用的场景标签</span>
+              </div>
+              
+              <!-- 行业场景 -->
+              <div class="scene-category">
+                <h5>行业场景▼</h5>
+                <div class="tag-group">
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="电商运营"> 电商运营</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="新媒体"> 新媒体</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="人力资源"> 人力资源</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="财务"> 财务</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="客户服务"> 客户服务</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="市场营销"> 市场营销</label>
+                </div>
+              </div>
+              
+              <!-- 功能场景 -->
+              <div class="scene-category">
+                <h5>功能场景▼</h5>
+                <div class="tag-group">
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="数据采集"> 数据采集</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="流程审批"> 流程审批</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="内容分发"> 内容分发</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="智能客服"> 智能客服</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="报表生成"> 报表生成</label>
+                  <label class="tag-label"><input type="checkbox" v-model="formData.scenes" value="监控预警"> 监控预警</label>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="form-group">
-          <label>属性</label>
-          <div class="checkbox-group">
-            <label><input type="checkbox" v-model="formData.attributes" value="开源免费"> 开源免费</label>
-            <label><input type="checkbox" v-model="formData.attributes" value="商业付费"> 商业付费</label>
-            <label><input type="checkbox" v-model="formData.attributes" value="个人原创"> 个人原创</label>
+          <div class="collapsible-section" :class="{ collapsed: collapsedSections.attributes }">
+            <div class="collapsible-header" @click="toggleSection('attributes')">
+              <label>属性</label>
+              <span class="collapse-icon">{{ collapsedSections.attributes ? '▶' : '▼' }}</span>
+            </div>
+            <div class="collapsible-content" v-if="!collapsedSections.attributes">
+              <div class="attribute-sections">
+                <div class="attribute-section">
+                  <h5>权益类型</h5>
+                  <div class="checkbox-group">
+                    <label><input type="checkbox" v-model="formData.attributes" value="开源免费"> 开源免费</label>
+                    <label><input type="checkbox" v-model="formData.attributes" value="商业付费"> 商业付费</label>
+                    <label><input type="checkbox" v-model="formData.attributes" value="试用版"> 试用版</label>
+                  </div>
+                </div>
+                <div class="attribute-section">
+                  <h5>创作类型</h5>
+                  <div class="checkbox-group">
+                    <label><input type="checkbox" v-model="formData.attributes" value="个人原创"> 个人原创</label>
+                    <label><input type="checkbox" v-model="formData.attributes" value="团队协作"> 团队协作</label>
+                    <label><input type="checkbox" v-model="formData.attributes" value="官方模板"> 官方模板</label>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="form-group">
           <label>简介 <span class="required-mark">*</span></label>
-          <textarea v-model="formData.description" placeholder="请简要描述内容功能、使用方法等（不超过50字）" rows="3" maxlength="200"></textarea>
+          <textarea v-model="formData.description" placeholder="示例：这是一个基于 n8n 的电商订单自动同步工作流，支持 Shopify 与 ERP 系统数据互通。请简要描述内容功能、使用方法等（不超过200字）" rows="3" maxlength="200"></textarea>
+          <div class="hint-text">建议包含：功能描述、适用场景、核心价值</div>
         </div>
 
         <div class="form-group">
           <label>链接/代码 <span class="required-mark">*</span></label>
-          <input type="text" v-model="formData.link" placeholder="工作流链接、API地址或开源仓库地址">
+          <div class="link-types">
+            <div class="link-type-option">
+              <label><input type="radio" v-model="formData.linkType" value="template"> 工作流模板</label>
+              <input type="text" v-model="formData.templateLink" placeholder="n8n 模板地址（如：https://n8n.io/workflows/xxx）">
+            </div>
+            <div class="link-type-option">
+              <label><input type="radio" v-model="formData.linkType" value="api"> API地址</label>
+              <input type="text" v-model="formData.apiLink" placeholder="数据接口调用链接">
+            </div>
+            <div class="link-type-option">
+              <label><input type="radio" v-model="formData.linkType" value="repository"> 开源仓库</label>
+              <input type="text" v-model="formData.repositoryLink" placeholder="GitHub/GitLab 仓库地址">
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
-          <label>可见范围</label>
-          <select v-model="formData.visibility">
-            <option value="公开">公开（所有人可见）</option>
-            <option value="私有">私有（仅自己可见）</option>
-          </select>
+          <div class="collapsible-section" :class="{ collapsed: collapsedSections.visibility }">
+            <div class="collapsible-header" @click="toggleSection('visibility')">
+              <label>可见范围（默认公开）</label>
+              <span class="collapse-icon">{{ collapsedSections.visibility ? '▶' : '▼' }}</span>
+            </div>
+            <div class="collapsible-content" v-if="!collapsedSections.visibility">
+              <div class="visibility-options">
+                <label><input type="radio" v-model="formData.visibility" value="公开"> 公开（所有人可见）</label>
+                <label><input type="radio" v-model="formData.visibility" value="私有"> 私有（仅自己可见）</label>
+                <label><input type="radio" v-model="formData.visibility" value="团队可见"> 指定团队可见</label>
+                <label><input type="radio" v-model="formData.visibility" value="密码访问"> 密码访问</label>
+              </div>
+              <div v-if="formData.visibility === '密码访问'" class="password-section">
+                <input type="password" v-model="formData.accessPassword" placeholder="设置访问密码">
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group" style="margin-top: 30px;">
@@ -173,26 +329,63 @@ import { ref, reactive, onMounted, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
+import { supabase } from '../supabase.js'
+import { useAuthStore } from '../stores/auth.js'
 
 const router = useRouter()
 const fileInput = ref(null)
 const vditorRef = ref(null)
+const authStore = useAuthStore()
+
+// 平台分类映射
+const platformCategories = {
+  '自动化工作流': ['n8n', 'Zapier', 'Make', 'IFTTT', '扣子', 'Power Automate'],
+  '手动协作流': ['n8n', 'Zapier', 'Make', 'IFTTT', '扣子', 'Power Automate'],
+  '跨工具集成流': ['n8n', 'Zapier', 'Make', 'IFTTT', '扣子', 'Power Automate'],
+  'AI助手型': ['扣子', 'OpenAI', 'Claude', '文心一言', 'Power Automate'],
+  '数据处理型': ['扣子', 'OpenAI', 'Claude', '文心一言', 'Power Automate'],
+  '决策支持型': ['扣子', 'OpenAI', 'Claude', '文心一言', 'Power Automate'],
+  '工具入门': ['n8n', 'Zapier', 'Make', 'IFTTT', '扣子', 'OpenAI', 'Claude', '文心一言', 'Power Automate'],
+  '场景案例': ['n8n', 'Zapier', 'Make', 'IFTTT', '扣子', 'OpenAI', 'Claude', '文心一言', 'Power Automate'],
+  '故障排查': ['n8n', 'Zapier', 'Make', 'IFTTT', '扣子', 'OpenAI', 'Claude', '文心一言', 'Power Automate']
+}
+
+
 
 // 表单数据
 const formData = reactive({
-  contentType: '工作流',
+  contentType: '自动化工作流',
   title: '',
   platforms: [],
   scenes: [],
   attributes: [],
   description: '',
-  link: '',
+  templateLink: '',
+  apiLink: '',
+  repositoryLink: '',
+  linkType: 'template',
   visibility: '公开',
-  content: ''
+  accessPassword: '',
+  content: '',
+  coverImage: '' // 新增封面图片字段
+})
+
+// 折叠状态
+const collapsedSections = reactive({
+  workflow: true,     // 工作流默认折叠
+  agent: true,        // 智能体默认折叠
+  tutorial: true,     // 教程默认折叠
+  platforms: false,   // 必选项默认展开
+  scenes: true,       // 非必选项默认折叠
+  attributes: true,   // 非必选项默认折叠
+  visibility: true    // 非必选项默认折叠
 })
 
 // 上传的文件
 const uploadedFiles = ref([])
+
+// 封面文件输入引用
+const coverFileInput = ref(null)
 
 // 编辑器实例
 let vditor = null
@@ -207,18 +400,48 @@ const modalCancelText = ref('取消')
 let modalConfirmCallback = null
 let modalCancelCallback = null
 
+// 封面选择相关数据
+const showCoverModal = ref(false)
+const coverImageFile = ref(null)
+const coverImagePreview = ref('')
+const coverUploadStep = ref('upload') // upload, preview
+
+// 根据内容类型筛选平台
+const filteredPlatforms = computed(() => {
+  const category = platformCategories[formData.contentType] || []
+  return category
+})
+
 // 表单验证
 const isFormValid = computed(() => {
+  const hasValidLink = () => {
+    switch (formData.linkType) {
+      case 'template':
+        return formData.templateLink.trim()
+      case 'api':
+        return formData.apiLink.trim()
+      case 'repository':
+        return formData.repositoryLink.trim()
+      default:
+        return false
+    }
+  }
+  
   return formData.title.trim() && 
          formData.platforms.length > 0 && 
          formData.description.trim() && 
-         formData.link.trim()
+         hasValidLink()
 })
+
+// 切换折叠状态
+const toggleSection = (section) => {
+  collapsedSections[section] = !collapsedSections[section]
+}
 
 // 初始化编辑器
 onMounted(() => {
   vditor = new Vditor('vditor', {
-    height: 600,
+    height: 800,
     placeholder: '请输入详细内容...',
     theme: 'classic',
     icon: 'material',
@@ -459,10 +682,36 @@ const handleModalOverlayClick = () => {
 // 草稿相关方法
 const saveDraft = async () => {
   try {
+    // 构建草稿数据，使用与发布相同的结构
     const draftData = {
-      formData: { ...formData },
-      editorContent: vditor ? vditor.getValue() : '',
-      uploadedFiles: uploadedFiles.value,
+      article_title: formData.title,
+      description: formData.description,
+      content: vditor ? vditor.getValue() : '',
+      
+      // 链接信息
+      link_type: formData.linkType,
+      template_link: formData.templateLink,
+      api_link: formData.apiLink,
+      repository_link: formData.repositoryLink,
+      
+      // 平台信息
+      platforms: formData.platforms,
+      
+      // 将内容类型、应用场景、属性、可见范围打包成JSON
+      tags: JSON.stringify({
+        content_type: formData.contentType,
+        scenes: formData.scenes,
+        attributes: formData.attributes,
+        visibility: formData.visibility,
+        access_password: formData.accessPassword
+      }),
+      
+      // 上传的文件信息
+      uploaded_files: uploadedFiles.value.map(file => ({
+        name: file.name,
+        preview: file.preview
+      })),
+      
       timestamp: new Date().getTime()
     }
     
@@ -488,17 +737,38 @@ const loadDraft = () => {
     if (draftData) {
       const parsedData = JSON.parse(draftData)
       
-      // 恢复表单数据
-      Object.assign(formData, parsedData.formData)
+      // 恢复表单数据（新结构）
+      formData.title = parsedData.article_title || ''
+      formData.description = parsedData.description || ''
+      formData.content = parsedData.content || ''
+      
+      // 恢复链接信息
+      formData.linkType = parsedData.link_type || 'template'
+      formData.templateLink = parsedData.template_link || ''
+      formData.apiLink = parsedData.api_link || ''
+      formData.repositoryLink = parsedData.repository_link || ''
+      
+      // 恢复平台信息
+      formData.platforms = parsedData.platforms || []
+      
+      // 恢复tags中的配置信息
+      if (parsedData.tags) {
+        const tags = JSON.parse(parsedData.tags)
+        formData.contentType = tags.content_type || '自动化工作流'
+        formData.scenes = tags.scenes || []
+        formData.attributes = tags.attributes || []
+        formData.visibility = tags.visibility || '公开'
+        formData.accessPassword = tags.access_password || ''
+      }
       
       // 恢复编辑器内容
-      if (vditor && parsedData.editorContent) {
-        vditor.setValue(parsedData.editorContent)
+      if (vditor && parsedData.content) {
+        vditor.setValue(parsedData.content)
       }
       
       // 恢复上传的文件
-      if (parsedData.uploadedFiles) {
-        uploadedFiles.value = parsedData.uploadedFiles
+      if (parsedData.uploaded_files) {
+        uploadedFiles.value = parsedData.uploaded_files
       }
       
       return true
@@ -596,25 +866,235 @@ const handleSubmit = async () => {
   )
   
   if (confirmed) {
-    try {
-      // 保存编辑器内容到表单
-      if (vditor) {
-        formData.content = vditor.getValue()
+    // 显示封面选择弹窗
+    showCoverModal.value = true
+  }
+}
+
+// 封面选择相关函数
+const triggerCoverUpload = () => {
+  if (coverFileInput.value) {
+    coverFileInput.value.click()
+  }
+}
+
+const handleCoverFileSelect = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    // 检查文件类型和大小
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp', 'image/bmp'].includes(file.type)) {
+      showAlert('格式错误', '请选择JPG、PNG、GIF、WebP或BMP格式的图片')
+      return
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert('文件过大', '封面图片不能超过5MB')
+      return
+    }
+    
+    // 读取文件并显示预览
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      coverImageFile.value = file
+      coverImagePreview.value = e.target.result
+      coverUploadStep.value = 'preview'
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const resetCoverUpload = () => {
+  coverImageFile.value = null
+  coverImagePreview.value = ''
+  coverUploadStep.value = 'upload'
+  
+  // 清空文件输入
+  if (coverFileInput.value) {
+    coverFileInput.value.value = ''
+  }
+}
+
+const nextStep = () => {
+  if (coverImagePreview.value) {
+    coverUploadStep.value = 'preview'
+  }
+}
+
+const skipCover = async () => {
+  // 跳过封面，直接发布
+  await publishArticle()
+}
+
+const confirmCover = async () => {
+  // 确认封面，发布文章
+  await publishArticle()
+}
+
+const closeCoverModal = () => {
+  showCoverModal.value = false
+  resetCoverUpload()
+}
+
+const handleCoverModalOverlayClick = () => {
+  closeCoverModal()
+}
+
+// 上传封面图片到 Supabase Storage（适配自定义认证）
+const uploadCoverImage = async (file) => {
+  if (!file) return null
+  
+  try {
+    // 清理文件名，只保留英文字母、数字、下划线和连字符
+    const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    
+    // 生成唯一的文件名，包含用户ID（如果可用）
+    const currentUser = authStore.user
+    const userId = currentUser?.id || 'anonymous'
+    const fileName = `covers/${userId}/${Date.now()}_${cleanFileName}`
+    
+    console.log('开始上传封面图片:', fileName)
+    
+    // 使用当前Supabase客户端上传（存储桶策略已设置为宽松）
+    const { data, error } = await supabase.storage
+      .from('images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
+    
+    if (error) {
+      console.error('封面图片上传失败:', error)
+      
+      // 检查存储桶是否存在
+      const bucketExists = await checkStorageBucketExists()
+      if (!bucketExists) {
+        throw new Error('存储桶配置缺失，请先运行数据库迁移脚本创建images存储桶')
       }
       
-      // 清除草稿
-      clearDraft()
+      // 如果是权限错误，提示用户检查存储桶策略
+      if (error.message.includes('row-level security') || error.message.includes('permission')) {
+        throw new Error('上传权限错误，请确保存储桶策略允许匿名上传')
+      }
       
-      // 模拟发布成功
-      await showAlert('发布成功', '内容已成功发布')
-      
-      // 跳转到其他页面
-      router.push('/market')
-      
-    } catch (error) {
-      console.error('发布失败:', error)
-      await showAlert('发布失败', '发布过程中出现错误，请重试')
+      throw new Error('封面图片上传失败: ' + error.message)
     }
+    
+    console.log('封面图片上传成功:', data)
+    
+    // 获取公开访问URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('images')
+      .getPublicUrl(fileName)
+    
+    console.log('封面图片公开URL:', publicUrl)
+    
+    // 直接返回图片URL，不包装成HTML标签
+    return publicUrl
+  } catch (error) {
+    console.error('封面图片处理失败:', error)
+    throw error
+  }
+}
+
+// 检查存储桶是否存在
+const checkStorageBucketExists = async () => {
+  try {
+    // 尝试列出存储桶内容来验证存储桶是否存在
+    const { data, error } = await supabase.storage
+      .from('images')
+      .list('covers', { limit: 1 })
+    
+    // 如果没有错误或者错误不是"存储桶不存在"，则认为存储桶存在
+    if (!error || (error && !error.message.includes('bucket'))) {
+      return true
+    }
+    
+    return false
+  } catch (error) {
+    console.error('检查存储桶失败:', error)
+    return false
+  }
+}
+
+// 实际发布文章的函数
+const publishArticle = async () => {
+  try {
+    // 保存编辑器内容到表单
+    if (vditor) {
+      formData.content = vditor.getValue()
+    }
+    
+    // 上传封面图片（如果有）
+    let coverImageUrl = null
+    if (coverImageFile.value) {
+      coverImageUrl = await uploadCoverImage(coverImageFile.value)
+    }
+    
+    // 构建文章数据
+    const articleData = {
+      article_title: formData.title, // 文章标题
+      description: formData.description, // 简介
+      content: formData.content, // 文章内容
+      
+      // 链接信息
+      link_type: formData.linkType,
+      template_link: formData.templateLink,
+      api_link: formData.apiLink,
+      repository_link: formData.repositoryLink,
+      
+      // 平台信息
+      platforms: formData.platforms,
+      
+      // 封面图片URL
+      cover_image: coverImageUrl,
+      
+      // 将内容类型、应用场景、属性、可见范围打包成JSON存到tags字段
+      tags: JSON.stringify({
+        content_type: formData.contentType, // 内容类型
+        scenes: formData.scenes, // 应用场景
+        attributes: formData.attributes, // 属性
+        visibility: formData.visibility, // 可见范围
+        access_password: formData.accessPassword // 访问密码（如果有）
+      }),
+      
+      // 上传的文件信息
+      uploaded_files: uploadedFiles.value.map(file => ({
+        name: file.name,
+        preview: file.preview
+      })),
+      
+      // 用户信息
+      user_id: getCurrentUserId(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
+    // 保存到数据库
+    const { data, error } = await supabase
+      .from('articles')
+      .insert([articleData])
+      .select()
+    
+    if (error) {
+      console.error('保存文章失败:', error)
+      throw new Error('保存文章失败: ' + error.message)
+    }
+    
+    console.log('文章保存成功:', data)
+    
+    // 清除草稿
+    clearDraft()
+    
+    // 关闭封面弹窗
+    closeCoverModal()    
+    await showAlert('发布成功', '内容已成功发布并保存到数据库')
+    
+    // 跳转到市场页面
+    router.push('/market')
+    
+  } catch (error) {
+    console.error('发布失败:', error)
+    await showAlert('发布失败', error.message || '发布过程中出现错误，请重试')
   }
 }
 
@@ -643,6 +1123,31 @@ onMounted(() => {
     checkDraftOnLoad()
   }, 500)
 })
+
+// 获取当前用户ID
+const getCurrentUserId = () => {
+  // 首先尝试从authStore获取
+  if (authStore.user && authStore.user.id) {
+    return authStore.user.id
+  }
+  
+  // 如果store中没有用户信息，尝试从localStorage获取
+  const savedUser = localStorage.getItem('currentUser')
+  if (savedUser) {
+    try {
+      const userData = JSON.parse(savedUser)
+      if (userData && userData.id) {
+        return userData.id
+      }
+    } catch (error) {
+      console.error('解析用户数据失败:', error)
+    }
+  }
+  
+  // 如果都没有，返回一个有效的用户ID（使用数据库中的admin用户ID）
+  console.warn('无法获取当前用户ID，使用默认用户ID')
+  return 'dcdd4de9-66a1-4a6b-8b58-3c3324d7b1b4' // admin用户的ID
+}
 
 // 将图片插入到编辑器中
 const insertImagesToEditor = async (files) => {
@@ -684,604 +1189,8 @@ const insertImagesToEditor = async (files) => {
   }
 }
 
-
-
-
-
 </script>
 
 <style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.edit-container {
-  background-color: #f5f7fa;
-  padding: 20px;
-  min-height: 100vh;
-}
-
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  gap: 25px;
-}
-
-/* 左栏配置区样式 */
-.config-panel {
-  width: 350px;
-  background: #fff;
-  border-radius: 8px;
-  padding: 25px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  height: fit-content;
-}
-
-/* 分离的截图/教程图区域样式 */
-.image-upload-section {
-  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-  border: 2px solid #e3f2fd;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
-}
-
-.image-upload-section h3 {
-  color: #1976d2;
-  font-size: 18px;
-  margin-bottom: 15px;
-  text-align: center;
-  font-weight: 600;
-}
-
-/* 分离的截图/教程图区域样式 */
-.image-upload-section {
-  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-  border: 2px solid #e3f2fd;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
-}
-
-.image-upload-section h3 {
-  color: #1976d2;
-  font-size: 18px;
-  margin-bottom: 15px;
-  text-align: center;
-  font-weight: 600;
-}
-
-/* 右栏编辑区样式 */
-.editor-panel {
-  flex: 1;
-  background: #fff;
-  border-radius: 8px;
-  padding: 30px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-  display: flex;
-  flex-direction: column;
-}
-
-/* 教程卡片样式 */
-.tutorial-card {
-  background: linear-gradient(135deg, #fff9f2 0%, #fff5eb 100%);
-  border: 2px solid #ffe8cc;
-  border-radius: 12px;
-  padding: 20px;
-  margin-top: 20px;
-  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.1);
-}
-
-.tutorial-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #ffe8cc;
-}
-
-.tutorial-header h4 {
-  color: #ff9800;
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.tutorial-badge {
-  background: #ff9800;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.tutorial-content {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.tutorial-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.tutorial-number {
-  background: #ff9800;
-  color: white;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.tutorial-item div {
-  flex: 1;
-}
-
-.tutorial-item strong {
-  color: #333;
-  font-size: 14px;
-  display: block;
-  margin-bottom: 4px;
-}
-
-.tutorial-item p {
-  color: #666;
-  font-size: 13px;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.form-group {
-  margin-bottom: 22px;
-}
-
-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #333;
-  font-size: 14px;
-}
-
-.radio-group, .checkbox-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.radio-group label, .checkbox-group label {
-  font-weight: 400;
-  color: #444;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-input[type="text"], textarea, select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border 0.3s;
-}
-
-input[type="text"]:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
-}
-
-.file-upload {
-  border: 2px dashed #ddd;
-  border-radius: 6px;
-  padding: 25px;
-  text-align: center;
-  margin-top: 10px;
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.file-upload:hover {
-  border-color: #007bff;
-  background-color: rgba(0,123,255,0.02);
-}
-
-.file-upload p {
-  color: #666;
-  font-size: 13px;
-  margin-bottom: 10px;
-}
-
-.file-preview {
-  margin-top: 10px;
-}
-
-.preview-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 10px;
-  background: #f8f9fa;
-  border-radius: 4px;
-}
-
-.preview-item img {
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 4px;
-  margin-right: 10px;
-}
-
-.file-name {
-  flex: 1;
-  font-size: 12px;
-  color: #666;
-}
-
-.remove-btn {
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-}
-
-.remove-btn:hover {
-  background: #c82333;
-}
-
-button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 10px;
-  font-size: 14px;
-  transition: background 0.3s;
-}
-
-button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-button:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-button.cancel {
-  background-color: #6c757d;
-}
-
-button.cancel:hover {
-  background-color: #5a6268;
-}
-
-button.draft {
-  background-color: #28a745;
-}
-
-button.draft:hover {
-  background-color: #218838;
-}
-
-.required-mark {
-  color: red;
-  margin-left: 2px;
-}
-
-/* 编辑区醒目样式 */
-.editor-header {
-  margin-bottom: 20px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.editor-header h3 {
-  color: #222;
-  font-size: 18px;
-  margin-bottom: 0;
-}
-
-.editor-header p {
-  color: #666;
-  font-size: 13px;
-}
-
-#vditor {
-  min-height: 600px;
-  background-color: #fff;
-}
-
-/* Vditor 样式调整 */
-#vditor .vditor-toolbar {
-  border-bottom: 1px solid #e9ecef;
-}
-
-#vditor .vditor-content {
-  border: none;
-}
-
-#vditor .vditor-resize {
-  display: none;
-}
-
-/* 适配小屏幕 */
-@media (max-width: 992px) {
-  .container {
-    flex-direction: column;
-  }
-  
-  .config-panel {
-    width: 100%;
-  }
-  
-  #editor {
-    min-height: 400px;
-  }
-}
-
-/* 自定义弹窗样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  padding: 0;
-  width: 400px;
-  max-width: 90vw;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.modal-header {
-  padding: 20px 20px 10px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #333;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #999;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background 0.2s;
-}
-
-.modal-close:hover {
-  background: #f5f5f5;
-  color: #666;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-body p {
-  margin: 0;
-  color: #666;
-  line-height: 1.5;
-  font-size: 14px;
-}
-
-.modal-footer {
-  padding: 10px 20px 20px;
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.modal-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-width: 80px;
-}
-
-.modal-btn-primary {
-  background: #1976d2;
-  color: white;
-}
-
-.modal-btn-primary:hover {
-  background: #1565c0;
-}
-
-.modal-btn-cancel {
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
-}
-
-.modal-btn-cancel:hover {
-  background: #e0e0e0;
-}
-
-/* 自定义弹窗样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  padding: 0;
-  width: 400px;
-  max-width: 90vw;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.modal-header {
-  padding: 20px 20px 10px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #333;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #999;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background 0.2s;
-}
-
-.modal-close:hover {
-  background: #f5f5f5;
-  color: #666;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-body p {
-  margin: 0;
-  color: #666;
-  line-height: 1.5;
-  font-size: 14px;
-}
-
-.modal-footer {
-  padding: 10px 20px 20px;
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.modal-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-width: 80px;
-}
-
-.modal-btn-primary {
-  background: #1976d2;
-  color: white;
-}
-
-.modal-btn-primary:hover {
-  background: #1565c0;
-}
-
-.modal-btn-cancel {
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
-}
-
-.modal-btn-cancel:hover {
-  background: #e0e0e0;
-}
+@import '../css/editView.css';
 </style>

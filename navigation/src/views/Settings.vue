@@ -2,10 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-
+import ProfileEditCard from '../components/ProfileEditCard.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+
+// 控制个人资料编辑卡片显示
+const showProfileCard = ref(false)
 
 // 设置选项
 const settings = ref([
@@ -52,8 +55,13 @@ const handleLogout = async () => {
 
 // 处理设置项点击
 const handleSettingClick = (setting) => {
-  // 这里可以添加具体的设置页面导航逻辑
-  console.log('点击设置项:', setting.title)
+  if (setting.id === 1) {
+    // 账户设置 - 打开个人资料编辑卡片
+    showProfileCard.value = true
+  } else {
+    // 其他设置项的处理逻辑
+    console.log('点击设置项:', setting.title)
+  }
 }
 
 onMounted(() => {
@@ -111,6 +119,9 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <!-- 个人资料编辑卡片 -->
+    <ProfileEditCard v-model:show="showProfileCard" />
   </div>
 </template>
 

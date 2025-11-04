@@ -35,9 +35,18 @@
         <!-- 互动区域 -->
         <div class="card-interact">
           <div class="interact-stats">
-            <span class="like" @click="handleLike">👍 {{ likes }}</span>
-            <span class="star" @click="handleFavorite">⭐ {{ favorites }}</span>
-            <span class="comment" @click="handleComment">💬 {{ comments }}</span>
+            <span class="like" :class="{ active: isLiked }" @click="handleLike">
+              <i class="uil uil-thumbs-up"></i>
+              <span>{{ isLiked ? likes + 1 : likes }}</span>
+            </span>
+            <span class="star" :class="{ active: isFavorited }" @click="handleFavorite">
+              <i class="uil uil-star"></i>
+              <span>{{ isFavorited ? favorites + 1 : favorites }}</span>
+            </span>
+            <span class="comment" @click="handleComment">
+              <i class="uil uil-comment-alt"></i>
+              <span>{{ comments }}</span>
+            </span>
           </div>
           <a href="#" class="detail-link" @click="handleDetail">查看详情</a>
         </div>
@@ -101,24 +110,36 @@ const props = defineProps({
 // 定义组件事件
 const emit = defineEmits(['like', 'favorite', 'comment', 'detail', 'cardClick'])
 
+// 图标状态管理
+const isLiked = ref(false)
+const isFavorited = ref(false)
+
 // 鼠标悬停状态
 const isHovered = ref(false)
 
 // 事件处理函数
-const handleLike = () => {
-  emit('like', props.likes + 1)
+const handleLike = (e) => {
+  e.stopPropagation() // 阻止事件冒泡
+  isLiked.value = !isLiked.value
+  const newLikes = isLiked.value ? props.likes + 1 : props.likes - 1
+  emit('like', newLikes)
 }
 
-const handleFavorite = () => {
-  emit('favorite', props.favorites + 1)
+const handleFavorite = (e) => {
+  e.stopPropagation() // 阻止事件冒泡
+  isFavorited.value = !isFavorited.value
+  const newFavorites = isFavorited.value ? props.favorites + 1 : props.favorites - 1
+  emit('favorite', newFavorites)
 }
 
-const handleComment = () => {
+const handleComment = (e) => {
+  e.stopPropagation() // 阻止事件冒泡
   emit('comment')
 }
 
 const handleDetail = (e) => {
   e.preventDefault()
+  e.stopPropagation() // 阻止事件冒泡
   emit('detail')
 }
 
@@ -131,9 +152,7 @@ const handleMouseLeave = () => {
 }
 
 // 处理卡片点击事件
-const handleCardClick = (e) => {
-  // 阻止事件冒泡，避免与内部按钮点击冲突
-  e.stopPropagation()
+const handleCardClick = () => {
   emit('cardClick')
 }
 </script>
@@ -148,7 +167,7 @@ const handleCardClick = (e) => {
 
 .card {
   width: 100%;
-  max-width: 785px;
+  max-width: 900px;
   background-color: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -169,16 +188,20 @@ const handleCardClick = (e) => {
 .card-left {
   flex: 0 0 220px;
   display: flex;
-  align-items: flex-start;
-  padding: 0.75rem; /* 缩减内边距 */
+  align-items: center;
+  justify-content: center;
+  padding: 0.95rem 0.75rem 0.25rem 0.75rem; /* 上、右、下、左内边距，上边距更大 */
+  height: 140px; /* 固定图片区域高度 */
+  overflow: hidden; /* 防止图片溢出 */
 }
 
 .card-img {
   width: 100%;
-  height: 100%; /* 压缩图片高度 */
+  height: 100%;
   object-fit: cover;
   display: block;
   border-radius: 8px;
+  min-height: 130px; /* 确保最小高度 */
 }
 
 .card-right {
@@ -258,6 +281,7 @@ const handleCardClick = (e) => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
   overflow: hidden;
 }
 
@@ -287,6 +311,36 @@ const handleCardClick = (e) => {
 
 .like:hover, .star:hover, .comment:hover {
   color: #165DFF;
+}
+
+/* 点赞图标样式 - 蓝色 */
+.like.active {
+  color: #165DFF;
+}
+
+.like.active i {
+  font-weight: bold;
+  text-shadow: 0 0 2px rgba(22, 93, 255, 0.3);
+}
+
+/* 收藏图标样式 - 黄色 */
+.star.active {
+  color: #FFC53D;
+}
+
+.star.active i {
+  font-weight: bold;
+  text-shadow: 0 0 2px rgba(255, 197, 61, 0.3);
+}
+
+/* 评论图标保持默认样式 */
+.comment.active {
+  color: #165DFF;
+}
+
+.comment.active i {
+  font-weight: bold;
+  text-shadow: 0 0 2px rgba(22, 93, 255, 0.3);
 }
 
 .detail-link {

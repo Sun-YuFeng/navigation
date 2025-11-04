@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// 使用正确的 navigation 项目配置
+const supabaseUrl = 'https://zpiabcsywqezlspzbqrv.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwaWFiY3N5d3FlemxzcHpicXJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4OTc0NTYsImV4cCI6MjA3NjQ3MzQ1Nn0.qm4aGAsImDHbqLVmSG5YypXFDtgK-QilnLgS6u3f6Io'
 
 // 创建Supabase客户端
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -9,6 +10,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false
+  },
+  db: {
+    schema: 'public'
   }
 })
 

@@ -54,7 +54,58 @@
               <input type="checkbox" class="checkbox" v-model="filters.contentTypes.agent" @change="updateFilters"> 智能体
             </div>
             <div class="checkbox-item">
-              <input type="checkbox" class="checkbox" v-model="filters.contentTypes.tutorial" @change="updateFilters"> 教程/模板
+              <input type="checkbox" class="checkbox" v-model="filters.contentTypes.tutorial" @change="updateFilters"> 教程
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <div class="group-title">内容类型</div>
+            <div class="tag-group">
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('自动化工作流') }"
+                @click="toggleSubType('自动化工作流')"
+              >自动化工作流</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('手动协作流') }"
+                @click="toggleSubType('手动协作流')"
+              >手动协作流</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('跨工具集成流') }"
+                @click="toggleSubType('跨工具集成流')"
+              >跨工具集成流</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('AI助手型') }"
+                @click="toggleSubType('AI助手型')"
+              >AI助手型</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('数据处理型') }"
+                @click="toggleSubType('数据处理型')"
+              >数据处理型</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('决策支持型') }"
+                @click="toggleSubType('决策支持型')"
+              >决策支持型</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('工具入门') }"
+                @click="toggleSubType('工具入门')"
+              >工具入门</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('场景案例') }"
+                @click="toggleSubType('场景案例')"
+              >场景案例</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.subTypes.includes('故障排查') }"
+                @click="toggleSubType('故障排查')"
+              >故障排查</span>
             </div>
           </div>
 
@@ -63,29 +114,64 @@
             <div class="tag-group">
               <span 
                 class="tag" 
-                :class="{ selected: filters.scenarios.includes('办公自动化') }"
-                @click="toggleScenario('办公自动化')"
-              >办公自动化</span>
+                :class="{ selected: filters.scenarios.includes('电商运营') }"
+                @click="toggleScenario('电商运营')"
+              >电商运营</span>
               <span 
                 class="tag" 
-                :class="{ selected: filters.scenarios.includes('数据处理') }"
-                @click="toggleScenario('数据处理')"
-              >数据处理</span>
+                :class="{ selected: filters.scenarios.includes('新媒体') }"
+                @click="toggleScenario('新媒体')"
+              >新媒体</span>
               <span 
                 class="tag" 
-                :class="{ selected: filters.scenarios.includes('内容创作') }"
-                @click="toggleScenario('内容创作')"
-              >内容创作</span>
+                :class="{ selected: filters.scenarios.includes('人力资源') }"
+                @click="toggleScenario('人力资源')"
+              >人力资源</span>
               <span 
                 class="tag" 
-                :class="{ selected: filters.scenarios.includes('开发工具') }"
-                @click="toggleScenario('开发工具')"
-              >开发工具</span>
+                :class="{ selected: filters.scenarios.includes('财务') }"
+                @click="toggleScenario('财务')"
+              >财务</span>
               <span 
                 class="tag" 
-                :class="{ selected: filters.scenarios.includes('生活服务') }"
-                @click="toggleScenario('生活服务')"
-              >生活服务</span>
+                :class="{ selected: filters.scenarios.includes('客户服务') }"
+                @click="toggleScenario('客户服务')"
+              >客户服务</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.scenarios.includes('市场营销') }"
+                @click="toggleScenario('市场营销')"
+              >市场营销</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.scenarios.includes('数据采集') }"
+                @click="toggleScenario('数据采集')"
+              >数据采集</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.scenarios.includes('流程审批') }"
+                @click="toggleScenario('流程审批')"
+              >流程审批</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.scenarios.includes('内容分发') }"
+                @click="toggleScenario('内容分发')"
+              >内容分发</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.scenarios.includes('智能客服') }"
+                @click="toggleScenario('智能客服')"
+              >智能客服</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.scenarios.includes('报表生成') }"
+                @click="toggleScenario('报表生成')"
+              >报表生成</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.scenarios.includes('监控预警') }"
+                @click="toggleScenario('监控预警')"
+              >监控预警</span>
             </div>
           </div>
 
@@ -114,9 +200,14 @@
               >扣子</span>
               <span 
                 class="tag" 
-                :class="{ selected: filters.platforms.includes('智谱清言') }"
-                @click="togglePlatform('智谱清言')"
-              >智谱清言</span>
+                :class="{ selected: filters.platforms.includes('IFTTT') }"
+                @click="togglePlatform('IFTTT')"
+              >IFTTT</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.platforms.includes('Power Automate') }"
+                @click="togglePlatform('Power Automate')"
+              >Power Automate</span>
             </div>
           </div>
 
@@ -135,9 +226,24 @@
               >商业付费</span>
               <span 
                 class="tag" 
+                :class="{ selected: filters.attributes.includes('试用版') }"
+                @click="toggleAttribute('试用版')"
+              >试用版</span>
+              <span 
+                class="tag" 
                 :class="{ selected: filters.attributes.includes('个人原创') }"
                 @click="toggleAttribute('个人原创')"
               >个人原创</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.attributes.includes('团队协作') }"
+                @click="toggleAttribute('团队协作')"
+              >团队协作</span>
+              <span 
+                class="tag" 
+                :class="{ selected: filters.attributes.includes('官方模板') }"
+                @click="toggleAttribute('官方模板')"
+              >官方模板</span>
             </div>
           </div>
 
@@ -212,10 +318,15 @@
 
           <!-- 内容渲染区域 -->
           <div class="content-render-area" style="margin-top: 10px;">
+            <!-- 筛选结果统计 -->
+            <div class="filter-results-info" v-if="filteredData.length !== originalData.length">
+              筛选结果：{{ filteredData.length }} 条（共 {{ originalData.length }} 条）
+            </div>
+            
             <!-- 卡片视图 -->
             <div v-if="currentView === 'card'" class="card-grid">
               <WorkflowCard 
-                v-for="item in workflowData" 
+                v-for="item in filteredData" 
                 :key="item.id"
                 :avatar="item.avatar"
                 :user-name="item.userName"
@@ -238,7 +349,7 @@
             <!-- 列表视图 -->
             <div v-else class="list-container">
               <CompactCard 
-                v-for="item in workflowData" 
+                v-for="item in filteredData" 
                 :key="item.id"
                 :avatar="item.avatar"
                 :user-name="item.userName"
@@ -325,11 +436,12 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import WorkflowCard from '@/components/WorkflowCard.vue'
 import CompactCard from '@/components/CompactCard.vue'
 import HotTopicsCard from '@/components/HotTopicsCard.vue'
+import { supabase } from '../supabase.js'
 
 const router = useRouter()
 
@@ -342,11 +454,12 @@ const hasNotifications = ref(true)
 // 筛选条件
 const filters = reactive({
   contentTypes: {
-    workflow: true,
-    agent: true,
-    tutorial: true
+    workflow: false,
+    agent: false,
+    tutorial: false
   },
-  scenarios: ['办公自动化'],
+  subTypes: [],
+  scenarios: ['电商运营'],
   platforms: ['n8n'],
   attributes: ['开源免费']
 })
@@ -354,7 +467,7 @@ const filters = reactive({
 // 处理搜索
 const handleSearch = () => {
   console.log('搜索关键词:', searchKeyword.value)
-  // 这里可以添加搜索逻辑
+  filterData() // 自动应用筛选
 }
 
 // 切换应用场景
@@ -365,6 +478,7 @@ const toggleScenario = (scenario) => {
   } else {
     filters.scenarios.push(scenario)
   }
+  filterData() // 自动应用筛选
 }
 
 // 切换来源平台
@@ -375,6 +489,18 @@ const togglePlatform = (platform) => {
   } else {
     filters.platforms.push(platform)
   }
+  filterData() // 自动应用筛选
+}
+
+// 切换内容子类型
+const toggleSubType = (subType) => {
+  const index = filters.subTypes.indexOf(subType)
+  if (index > -1) {
+    filters.subTypes.splice(index, 1)
+  } else {
+    filters.subTypes.push(subType)
+  }
+  filterData() // 自动应用筛选
 }
 
 // 切换属性
@@ -385,30 +511,142 @@ const toggleAttribute = (attribute) => {
   } else {
     filters.attributes.push(attribute)
   }
+  filterData() // 自动应用筛选
 }
 
 // 更新筛选条件
 const updateFilters = () => {
   console.log('筛选条件已更新:', filters)
+  filterData() // 自动应用筛选
 }
 
 // 重置筛选
 const resetFilters = () => {
   filters.contentTypes = {
-    workflow: true,
-    agent: true,
-    tutorial: true
+    workflow: false,
+    agent: false,
+    tutorial: false
   }
-  filters.scenarios = ['办公自动化']
+  filters.subTypes = []
+  filters.scenarios = ['电商运营']
   filters.platforms = ['n8n']
   filters.attributes = ['开源免费']
   console.log('筛选条件已重置')
+  filterData() // 自动应用筛选
 }
 
 // 应用筛选
 const applyFilters = () => {
   console.log('应用筛选条件:', filters)
-  // 这里可以添加筛选逻辑
+  filterData()
+}
+
+// 筛选数据函数
+const filterData = () => {
+  if (originalData.value.length === 0) return
+  
+  let filtered = originalData.value
+  
+  // 平台筛选
+  if (filters.platforms.length > 0) {
+    filtered = filtered.filter(item => {
+      // 检查item的platforms字段中是否包含选中的平台
+      return filters.platforms.some(platform => 
+        item.platforms && item.platforms.includes(platform)
+      )
+    })
+  }
+  
+  // 应用场景筛选
+  if (filters.scenarios.length > 0) {
+    filtered = filtered.filter(item => {
+      // 检查item的tags中是否包含选中的场景
+      return filters.scenarios.some(scenario => 
+        item.tags && item.tags.includes(scenario)
+      )
+    })
+  }
+  
+  // 内容子类型筛选
+  if (filters.subTypes.length > 0) {
+    filtered = filtered.filter(item => {
+      // 检查item的tags中是否包含选中的子类型
+      return filters.subTypes.some(subType => 
+        item.tags && item.tags.includes(subType)
+      )
+    })
+  }
+  
+  // 属性筛选
+  if (filters.attributes.length > 0) {
+    filtered = filtered.filter(item => {
+      // 检查item的tags中是否包含选中的属性
+      return filters.attributes.some(attribute => 
+        item.tags && item.tags.includes(attribute)
+      )
+    })
+  }
+  
+  // 搜索关键词筛选
+  if (searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.toLowerCase().trim()
+    filtered = filtered.filter(item => {
+      return (
+        (item.title && item.title.toLowerCase().includes(keyword)) ||
+        (item.description && item.description.toLowerCase().includes(keyword)) ||
+        (item.tags && item.tags.some(tag => tag.toLowerCase().includes(keyword)))
+      )
+    })
+  }
+  
+  // 内容类型筛选（工作流/智能体/教程）
+  const activeContentTypes = getActiveContentTypesArray()
+  if (activeContentTypes.length > 0) {
+    filtered = filtered.filter(item => {
+      // 检查item的tags中是否包含选中的内容类型
+      return activeContentTypes.some(contentType => 
+        item.tags && item.tags.includes(contentType)
+      )
+    })
+  }
+  
+  // 根据当前选项卡排序
+  filtered = sortDataByTab(filtered)
+  
+  filteredData.value = filtered
+  console.log('筛选完成，结果数量:', filteredData.value.length)
+}
+
+// 获取激活的内容类型数组
+const getActiveContentTypesArray = () => {
+  const activeTypes = []
+  if (filters.contentTypes.workflow) activeTypes.push('工作流')
+  if (filters.contentTypes.agent) activeTypes.push('智能体')
+  if (filters.contentTypes.tutorial) activeTypes.push('教程/模板')
+  return activeTypes
+}
+
+// 根据选项卡排序数据
+const sortDataByTab = (data) => {
+  const sortedData = [...data]
+  
+  switch (currentTab.value) {
+    case 'latest':
+      // 按发布时间排序（这里需要根据实际数据结构调整）
+      // 由于mock数据没有时间戳，暂时按原顺序
+      break
+    case 'likes':
+      sortedData.sort((a, b) => b.likes - a.likes)
+      break
+    case 'favorites':
+      sortedData.sort((a, b) => b.favorites - a.favorites)
+      break
+    default:
+      // 'all' 保持原顺序
+      break
+  }
+  
+  return sortedData
 }
 
 // 获取激活的内容类型
@@ -435,17 +673,163 @@ const currentTab = ref('all') // 默认全部内容
 const switchTab = (tabType) => {
   currentTab.value = tabType
   console.log('切换到选项卡:', tabType)
-  // 这里可以添加选项卡切换逻辑
+  filterData() // 自动应用筛选
+}
+
+// 从数据库获取文章数据
+const loadArticlesFromDatabase = async () => {
+  try {
+    console.log('开始从数据库获取文章数据...')
+    
+    // 查询文章数据，同时关联查询用户信息
+    const { data: articles, error } = await supabase
+      .from('articles')
+      .select(`
+        id,
+        user_id,
+        article_title,
+        description,
+        cover_image,
+        tags,
+        platforms,
+        like_count,
+        favorite_count,
+        created_at,
+        users!inner (
+          user_profiles (
+            display_name,
+            avatar_url
+          )
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    
+    if (error) {
+      console.error('获取文章数据失败:', error)
+      return []
+    }
+    
+    console.log('成功获取文章数据:', articles)
+    
+    // 将数据库文章转换为前端需要的格式
+    const formattedArticles = articles.map(article => {
+      // 解析tags字段
+      let tags = []
+      try {
+        const tagData = JSON.parse(article.tags || '{}')
+        if (tagData.content_type) tags.push(tagData.content_type)
+        if (tagData.scenes && Array.isArray(tagData.scenes)) {
+          tags = tags.concat(tagData.scenes.slice(0, 2))
+        }
+        if (tagData.attributes && Array.isArray(tagData.attributes)) {
+          tags = tags.concat(tagData.attributes.slice(0, 1))
+        }
+      } catch (e) {
+        console.warn('解析tags字段失败:', e)
+      }
+      
+      // 如果没有解析到tags，使用默认tags
+      if (tags.length === 0) {
+        tags = ['工作流', '自动化']
+      }
+      
+      // 处理平台信息
+      let platforms = []
+      try {
+        if (article.platforms) {
+          // 数据库中的platforms字段已经是数组格式，不需要JSON.parse
+          platforms = Array.isArray(article.platforms) ? article.platforms : []
+        }
+      } catch (e) {
+        console.warn('处理platforms字段失败:', e)
+      }
+      
+      // 如果没有平台信息，从tags中提取
+      if (platforms.length === 0 && tags.length > 0) {
+        platforms = tags.filter(tag => ['n8n', 'Zapier', 'Make', '扣子', 'IFTTT', 'Power Automate'].includes(tag))
+      }
+      
+      // 合并平台信息到tags
+      const finalTags = [...new Set([...tags, ...platforms])].slice(0, 3)
+      
+      // 获取封面图片URL
+      let coverImageUrl = '/src/assets/default.jpg' // 默认使用本地assets下的default.jpg
+      
+      // 如果文章有封面图片URL，直接使用
+      if (article.cover_image) {
+        try {
+          // 检查是否是完整的URL（包含http或https）
+          if (article.cover_image.startsWith('http://') || article.cover_image.startsWith('https://')) {
+            coverImageUrl = article.cover_image
+          } else {
+            // 如果不是完整URL，尝试从Supabase Storage获取
+            const { data: { publicUrl } } = supabase.storage
+              .from('images')
+              .getPublicUrl(article.cover_image)
+            
+            if (publicUrl) {
+              coverImageUrl = publicUrl
+            }
+          }
+        } catch (error) {
+          console.warn('获取封面图片URL失败:', error)
+        }
+      }
+      
+      // 获取用户信息
+      const userProfile = article.users?.user_profiles || {}
+      const avatarUrl = userProfile.avatar_url || '/src/assets/default.jpg'
+      const userName = userProfile.display_name || '用户' + article.user_id.slice(0, 8)
+      
+      return {
+        id: article.id,
+        avatar: avatarUrl,
+        userName: userName,
+        publishTime: formatTimeAgo(article.created_at),
+        tags: finalTags,
+        platforms: platforms, // 添加platforms字段
+        title: article.article_title || '无标题',
+        imageUrl: coverImageUrl,
+        description: article.description || '暂无描述',
+        likes: article.like_count || 0,
+        favorites: article.favorite_count || 0,
+        comments: Math.floor(Math.random() * 50) // 评论数随机生成
+      }
+    })
+    
+    return formattedArticles
+  } catch (error) {
+    console.error('加载文章数据时发生错误:', error)
+    return []
+  }
+}
+
+// 格式化时间显示
+const formatTimeAgo = (dateString) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffMins < 1) return '刚刚'
+  if (diffMins < 60) return `${diffMins}分钟前`
+  if (diffHours < 24) return `${diffHours}小时前`
+  if (diffDays < 7) return `${diffDays}天前`
+  return date.toLocaleDateString('zh-CN')
 }
 
 // 假数据
-const workflowData = ref([
+const mockWorkflowData = [
   {
     id: 1,
     avatar: 'https://picsum.photos/id/1005/40/40',
     userName: '张小明',
     publishTime: '3小时前',
     tags: ['n8n', '办公自动化', '开源免费'],
+    platforms: ['n8n'],
     title: '用n8n自动同步Notion数据到Excel的工作流',
     imageUrl: 'https://picsum.photos/id/0/600/400',
     description: '无需代码，通过3个节点实现Notion数据库新增内容自动写入Excel，附详细步骤图和配置说明。',
@@ -459,6 +843,7 @@ const workflowData = ref([
     userName: '李小红',
     publishTime: '5小时前',
     tags: ['Zapier', '内容创作', '商业付费'],
+    platforms: ['Zapier'],
     title: 'Zapier自动化社交媒体内容发布',
     imageUrl: 'https://picsum.photos/id/1/600/400',
     description: '连接Twitter、LinkedIn和Facebook，一键发布内容到多个平台，节省90%的时间。',
@@ -472,6 +857,7 @@ const workflowData = ref([
     userName: '王大力',
     publishTime: '1天前',
     tags: ['Make', '数据处理', '个人原创'],
+    platforms: ['Make'],
     title: 'Make自动化数据清洗和报表生成',
     imageUrl: 'https://picsum.photos/id/2/600/400',
     description: '从多个数据源自动收集数据，清洗后生成可视化报表，支持Excel和PDF导出。',
@@ -485,6 +871,7 @@ const workflowData = ref([
     userName: '赵小云',
     publishTime: '2天前',
     tags: ['扣子', '开发工具', '开源免费'],
+    platforms: ['扣子'],
     title: '扣子平台自动化代码部署流程',
     imageUrl: 'https://picsum.photos/id/3/600/400',
     description: 'GitHub代码提交后自动触发测试、构建和部署流程，支持多环境部署。',
@@ -498,6 +885,7 @@ const workflowData = ref([
     userName: '陈小刚',
     publishTime: '3天前',
     tags: ['智谱清言', '生活服务', '个人原创'],
+    platforms: ['智谱清言'],
     title: '智谱清言智能客服机器人配置',
     imageUrl: 'https://picsum.photos/id/4/600/400',
     description: '基于智谱清言大模型搭建智能客服系统，支持多轮对话和业务知识库。',
@@ -511,6 +899,7 @@ const workflowData = ref([
     userName: '刘小美',
     publishTime: '1周前',
     tags: ['n8n', '办公自动化', '商业付费'],
+    platforms: ['n8n'],
     title: 'n8n自动化邮件营销系统',
     imageUrl: 'https://picsum.photos/id/5/600/400',
     description: '根据用户行为自动发送个性化邮件，支持A/B测试和转化率追踪。',
@@ -518,9 +907,30 @@ const workflowData = ref([
     favorites: 93,
     comments: 31
   }
-])
+]
 
+// 工作流数据（包含数据库文章和假数据）
+const workflowData = ref([])
+// 原始数据备份，用于筛选
+const originalData = ref([])
+// 筛选后的数据
+const filteredData = ref([])
 
+// 组件挂载时加载数据
+onMounted(async () => {
+  console.log('market.vue 组件挂载，开始加载数据...')
+  
+  // 从数据库获取文章数据
+  const databaseArticles = await loadArticlesFromDatabase()
+  console.log('数据库文章数量:', databaseArticles.length)
+  
+  // 合并数据：数据库文章在前，假数据在后
+  const allData = [...databaseArticles, ...mockWorkflowData]
+  workflowData.value = allData
+  originalData.value = allData
+  filteredData.value = allData
+  console.log('合并后的文章总数:', allData.length)
+})
 
 // 组件事件处理
 const handleCardLike = (cardId, newLikes) => {
@@ -594,874 +1004,5 @@ const handlePublish = () => {
 </script>
 
 <style scoped>
-.market-container {
-  min-height: 100vh;
-  background-color: #f8f9fa;
-}
-
-/* 顶部导航条样式 */
-.market-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  background: white;
-  border-bottom: 1px solid #e9ecef;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-/* 左侧样式 */
-.header-left {
-  flex: 0 0 auto;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 20px;
-  font-family: "黑体", "SimHei", "Microsoft YaHei", sans-serif;
-  font-weight: 900;
-  color: #2c3e50;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.page-title i {
-  font-size: 24px;
-  color: #667eea;
-}
-
-/* 中间搜索框样式 */
-.header-center {
-  flex: 1;
-  max-width: 500px;
-  margin: 0 32px;
-}
-
-.search-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 8px 12px;
-  border: 1px solid #e9ecef;
-  transition: all 0.3s ease;
-}
-
-.search-container:focus-within {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-}
-
-.search-container i {
-  color: #6c757d;
-  font-size: 16px;
-  margin-right: 8px;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 14px;
-  color: #2c3e50;
-}
-
-.search-input::placeholder {
-  color: #adb5bd;
-}
-
-/* 右侧按钮样式 */
-.header-right {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.publish-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.publish-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.publish-btn i {
-  font-size: 16px;
-}
-
-.notification-bell {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: #f8f9fa;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.notification-bell:hover {
-  background: #e9ecef;
-}
-
-.notification-bell i {
-  font-size: 18px;
-  color: #6c757d;
-}
-
-.notification-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
-  background: #ff6b6b;
-  border-radius: 50%;
-  border: 2px solid white;
-}
-
-/* 主内容区域样式 */
-.market-content {
-  display: flex;
-  gap: 30px; /* 左侧筛选卡片与右侧内容区域间距60px */
-  padding: 15px 24px 24px 24px; /* 顶部边距15px */
-  min-height: calc(100vh - 80px);
-}
-
-/* 筛选卡片容器 */
-.filter-card-container {
-  flex: 0 0 auto;
-  margin-left: 30px; /* 向右移动30px，靠近用户自定义选项条 */
-  position: sticky;
-  top: 85px;
-  align-self: flex-start;
-}
-
-/* 筛选卡片样式 */
-.filter-card {
-  width: 255px; /* 进一步缩短宽度 */
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 18px; /* 增加内边距 */
-  font-family: "Microsoft Yahei", sans-serif;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.filter-title {
-  font-size: 20px; /* 增大字体 */
-  font-weight: bold;
-  margin-bottom: 18px; /* 增加间距 */
-  display: flex;
-  align-items: center;
-}
-
-.filter-icon {
-  color: #007AFF;
-  margin-right: 6px;
-}
-
-.filter-group {
-  margin-bottom: 18px; /* 进一步减少间距 */
-}
-
-.group-title {
-  font-size: 18px; /* 增大字体 */
-  color: #333;
-  margin-bottom: 8px; /* 进一步减少间距 */
-  font-weight: 600;
-}
-
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 4px; /* 进一步减少间距 */
-  padding: 3px 6px; /* 进一步减少内边距 */
-  border-radius: 3px;
-  background-color: transparent; /* 移除灰色背景 */
-  transition: background-color 0.2s ease;
-  font-size: 15px; /* 增大字体 */
-}
-
-.checkbox-item:hover {
-  background-color: #f0f0f0;
-}
-
-.checkbox {
-  margin-right: 6px;
-  transform: scale(0.9); /* 缩小复选框 */
-}
-
-.tag-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px; /* 进一步减少间距 */
-}
-
-.tag {
-  padding: 3px 8px; /* 进一步减少内边距 */
-  border-radius: 14px;
-  font-size: 12px; /* 增大字体 */
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: #f7f7f7; /* 更淡的灰色背景 */
-  color: #666;
-  border: none; /* 移除边框 */
-}
-
-.tag.selected {
-  background-color: #007AFF;
-  color: #fff;
-  border-color: #007AFF;
-}
-
-.tag:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.btn-group {
-  display: flex;
-  gap: 6px; /* 进一步减少间距 */
-  margin-top: 24px; /* 进一步减少间距 */
-}
-
-.filter-btn {
-  flex: 1;
-  padding: 10px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  width: calc(50% - 6px);
-  transition: all 0.3s ease;
-}
-
-.reset-btn {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  color: #666;
-}
-
-.reset-btn:hover {
-  background-color: #f8f9fa;
-  border-color: #ccc;
-}
-
-.apply-btn {
-  background-color: #007AFF;
-  color: #fff;
-}
-
-.apply-btn:hover {
-  background-color: #0056cc;
-  transform: translateY(-1px);
-}
-
-/* 用户自定义选项条 */
-.custom-options-bar {
-  width: 785px;
-  height: 70px;
-  background-color: #fff;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #eee;
-}
-
-.options-bar-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 100%;
-  padding: 0 20px;
-}
-
-.options-left {
-  flex: 1;
-}
-
-/* 选项卡样式 */
-.tab-group {
-  display: flex;
-  gap: 8px;
-}
-
-.tab-btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background-color: #fff;
-  color: #666;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.tab-btn:hover {
-  background-color: #f8f9fa;
-  border-color: #ccc;
-}
-
-.tab-btn.active {
-  background-color: #007AFF;
-  border-color: #007AFF;
-  color: #fff;
-}
-
-.options-right {
-  display: flex;
-  align-items: center;
-}
-
-.view-toggle {
-  display: flex;
-  gap: 8px;
-}
-
-.view-btn {
-  width: 40px;
-  height: 40px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background-color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.view-btn i {
-  font-size: 18px;
-  color: #666;
-}
-
-.view-btn:hover {
-  background-color: #f8f9fa;
-  border-color: #ccc;
-}
-
-.view-btn.active {
-  background-color: #007AFF;
-  border-color: #007AFF;
-}
-
-.view-btn.active i {
-  color: #fff;
-}
-
-/* 右侧内容区域 */
-.content-area {
-  display: flex;
-  gap: 20px;
-  min-width: 0;
-}
-
-.main-content-container {
-  flex: 1;
-  min-width: 0;
-}
-
-.content-placeholder {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6c757d;
-}
-
-.content-placeholder h2 {
-  font-size: 24px;
-  margin-bottom: 12px;
-  color: #2c3e50;
-}
-
-.filter-status {
-  margin-top: 30px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  text-align: left;
-}
-
-.filter-status p {
-  margin: 8px 0;
-  font-size: 14px;
-}
-
-/* 内容渲染区域样式 */
-.content-render-area {
-  width: 785px;
-}
-
-/* 卡片网格布局 */
-.card-grid {
-  display: grid;
-  grid-template-columns: 385px 385px;
-  justify-content: space-between;
-  gap: 15px;
-  padding: 10px 0;
-}
-
-/* 列表容器布局 */
-.list-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 10px 0;
-}
-
-/* 右侧卡片容器 */
-.right-cards-container {
-  flex: 0 0 290px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-/* 热门推荐卡片样式 */
-.hot-recommend-card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 10px;
-  height: fit-content;
-}
-
-/* 最新发布卡片样式 */
-.latest-posts-card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 10px;
-  height: fit-content;
-}
-
-.latest-posts-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.latest-posts-header i {
-  color: #00B96B;
-  font-size: 18px;
-  margin-right: 8px;
-}
-
-.latest-posts-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.post-links {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.post-link {
-  display: block;
-  font-size: 14px;
-  color: #1d2129;
-  text-decoration: none;
-  line-height: 1.4;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-  transition: color 0.3s ease-in-out;
-  cursor: pointer;
-}
-
-.post-link:last-child {
-  border-bottom: none;
-}
-
-.post-link:hover {
-  color: #165DFF;
-  text-decoration: none;
-}
-
-/* 最新发布卡片样式 */
-.latest-posts-card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 10px;
-  height: fit-content;
-}
-
-.latest-posts-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.latest-posts-header i {
-  color: #00B96B;
-  font-size: 18px;
-  margin-right: 8px;
-}
-
-.latest-posts-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.post-links {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.post-link {
-  display: block;
-  font-size: 14px;
-  color: #1d2129;
-  text-decoration: none;
-  line-height: 1.4;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-  transition: color 0.3s ease-in-out;
-  cursor: pointer;
-}
-
-.post-link:last-child {
-  border-bottom: none;
-}
-
-.post-link:hover {
-  color: #165DFF;
-  text-decoration: none;
-}
-
-/* 最新动态卡片样式 */
-.latest-news-card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 10px;
-  height: fit-content;
-}
-
-.latest-news-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.latest-news-header i {
-  color: #007AFF;
-  font-size: 18px;
-  margin-right: 8px;
-}
-
-.latest-news-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.news-item {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
-}
-
-.news-item:hover {
-  background-color: #f8f9fa;
-}
-
-.news-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.news-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.news-content {
-  flex: 1;
-}
-
-.news-title {
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  margin: 0 0 4px 0;
-  color: #1d2129;
-}
-
-.news-meta {
-  font-size: 12px;
-  color: #86909C;
-  margin: 0;
-}
-
-.hot-recommend-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.hot-recommend-header i {
-  color: #FF7D00;
-  font-size: 18px;
-  margin-right: 8px;
-}
-
-.hot-recommend-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.hot-item {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
-}
-
-.hot-item:hover {
-  background-color: transparent;
-}
-
-.hot-item:hover .hot-item-title {
-  color: #165DFF;
-}
-
-.hot-item-img {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.hot-item-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.hot-item-content {
-  flex: 1;
-}
-
-.hot-item-title {
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  margin: 0 0 4px 0;
-  transition: color 0.2s;
-}
-
-.hot-item-meta {
-  font-size: 12px;
-  color: #86909C;
-  margin: 0;
-}
-
-/* 热门话题卡片样式 */
-.topic-card {
-  background-color: #fff;
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  border: 1px solid #E5E7EB;
-  width: 100%;
-  height: fit-content;
-}
-
-/* 固定热门话题卡片 */
-.sticky-card {
-  position: sticky;
-  top: 100px; /* 距离顶部100px，避免与顶部导航重叠 */
-  z-index: 10;
-}
-
-/* 话题头部样式 */
-.topic-header {
-  display: flex;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.05));
-  color: #6366F1;
-  font-weight: 600;
-}
-
-.topic-header i {
-  font-size: 1.25rem;
-  margin-right: 0.5rem;
-}
-
-.topic-header h3 {
-  font-size: 1.125rem;
-  margin: 0;
-}
-
-/* 话题列表样式 */
-.topic-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.topic-list li {
-  padding: 0.5rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.topic-list li:hover {
-  background-color: #F3F4F6;
-  padding-left: calc(1rem + 2px);
-}
-
-.topic-list .divider {
-  border-bottom: 1px solid #E5E7EB;
-}
-
-/* 排名标签样式 */
-.rank-tag {
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-right: 0.5rem;
-}
-
-.rank-tag.top1 {
-  color: #F59E0B;
-}
-
-.rank-tag.other {
-  color: #6B7280;
-}
-
-/* 浏览量样式 */
-.view-count {
-  color: #6B7280;
-  font-size: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.view-count i {
-  font-size: 0.875rem;
-}
-
-/* 查看全部样式 */
-.view-all {
-  padding: 0.75rem 1rem;
-  text-align: right;
-  color: #6366F1;
-  font-size: 0.875rem;
-  cursor: pointer;
-  border-top: 1px solid #E5E7EB;
-}
-
-.view-all:hover {
-  text-decoration: underline;
-}
-
-.view-all i {
-  font-size: 0.75rem;
-  margin-left: 0.25rem;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .market-header {
-    padding: 12px 16px;
-  }
-  
-  .header-center {
-    margin: 0 16px;
-  }
-  
-  .page-title span {
-    display: none;
-  }
-  
-  .publish-btn span {
-    display: none;
-  }
-  
-  .market-content {
-    padding: 16px;
-  }
-  
-  .card-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .list-container {
-    gap: 12px;
-  }
-  
-  .content-area {
-    flex-direction: column;
-  }
-  
-  .right-cards-container {
-    flex: none;
-    width: 100%;
-    gap: 20px;
-    margin-top: 20px;
-  }
-  
-  .hot-recommend-card {
-    flex: none;
-    width: 100%;
-    position: static;
-    margin-top: 0;
-  }
-  
-  .latest-news-card {
-    flex: none;
-    width: 100%;
-    position: static;
-  }
-}
+@import '../css/marketView.css'
 </style>

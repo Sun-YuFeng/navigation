@@ -3,7 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { supabase } from '../supabase.js'
-import ProfileEditCard from './ProfileEditCard.vue'
+// // // // import ProfileEditCard from './ProfileEditCard.vue' // 暂时注释，后期可能使用 // 暂时注释，后期可能使用 // 暂时注释，后期可能使用 // 暂时注释，后期可能使用
 import CategoryPicker from './CategoryPicker.vue'
 
 const router = useRouter()
@@ -182,9 +182,9 @@ onMounted(() => {
   loadUserAvatar()
 })
 
-// 打开个人资料卡片
-const openProfileCard = () => {
-  showProfileCard.value = true
+// 打开个人中心页面
+const openPersonaCenter = () => {
+  router.push('/person-center')
 }
 
 // 打开设置页面
@@ -204,11 +204,11 @@ const navigateTo = (route) => {
     <!-- 顶部区域 - 用户头像 -->
     <div class="top-section">
       <!-- 用户头像 -->
-      <div class="nav-item avatar-item" @click="openProfileCard">
+      <div class="nav-item avatar-item" @click="openPersonaCenter">
         <div class="avatar-container">
           <img :src="userAvatar" alt="用户头像" class="avatar" />
         </div>
-        <span class="tooltip">个人资料</span>
+        <span class="tooltip">个人中心</span>
       </div>
     </div>
 
@@ -259,7 +259,7 @@ const navigateTo = (route) => {
   </nav>
 
   <!-- 个人资料编辑卡片 -->
-  <ProfileEditCard v-model:show="showProfileCard" />
+  <!-- <ProfileEditCard v-model:show="showProfileCard" /> 暂时注释，后期可能使用 -->
   
   <!-- 分类选择器 -->
   <CategoryPicker ref="categoryPickerRef" @categoryAdded="handleCategoryAdded" />

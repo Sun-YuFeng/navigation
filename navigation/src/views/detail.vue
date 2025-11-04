@@ -354,11 +354,13 @@ function MyForm() {
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { supabase } from '../supabase.js'
 import HotTopicsCard from '@/components/HotTopicsCard.vue'
 
 const router = useRouter()
+const route = useRoute()
 
 // 处理返回按钮点击
 const handleBack = () => {

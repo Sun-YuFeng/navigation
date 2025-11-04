@@ -7,6 +7,7 @@ import ClassifyView from '../views/Classify.vue'
 import MarketView from '../views/market.vue'
 import EditView from '../views/edit.vue'
 import DetailView from '../views/detail.vue'
+import PersonCenterView from '../views/personCenter.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -59,11 +60,17 @@ const router = createRouter({
       component: DetailView,
       meta: { requiresAuth: true }
     },
+    {
+      path: '/person-center',
+      name: 'person-center',
+      component: PersonCenterView,
+      meta: { requiresAuth: true }
+    },
   ],
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _, next) => {
   // 检查本地存储中的认证状态
   const currentUser = localStorage.getItem('currentUser')
   const isAuthenticated = !!currentUser

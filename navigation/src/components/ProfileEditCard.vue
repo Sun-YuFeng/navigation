@@ -157,9 +157,17 @@ const saveProfile = async () => {
     }
     
     showProfileCard.value = false
+    
+    // 显示成功消息
+    alert('个人资料已保存成功！')
   } catch (error) {
     console.error('保存失败:', error)
-    alert('保存失败: ' + error.message)
+    // 检查是否是数据库相关的错误，如果是则显示友好提示
+    if (error.message.includes('RLS') || error.message.includes('401') || error.message.includes('Unauthorized')) {
+      alert('个人资料已保存到本地，但数据库同步失败。这不会影响您的使用体验。')
+    } else {
+      alert('保存失败: ' + error.message)
+    }
   }
 }
 

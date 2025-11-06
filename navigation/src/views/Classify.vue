@@ -27,6 +27,7 @@
                 :src="getWebsiteIcon(site.url)" 
                 :alt="site.name"
                 class="website-icon-img"
+                loading="lazy"
                 @error="handleWebsiteIconError"
               />
               <!-- 删除按钮 -->
@@ -89,7 +90,7 @@
                   @click="selectRecommendedSite(site)"
                 >
                   <div class="site-icon">
-                    <img :src="site.icon" :alt="site.title" @error="handleIconError">
+                    <img :src="site.icon" :alt="site.title" loading="lazy" @error="handleIconError">
                   </div>
                   <div class="site-info">
                     <h4 class="site-title">{{ site.title }}</h4>
@@ -191,7 +192,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { getCategoryByName } from '../utils/categoryData'
@@ -202,21 +203,34 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
+// ========== 性能优化：数据缓存 ==========
+// 缓存分类名称，避免重复查询
+const categoryNameCache = new Map()
+// 缓存用户分类映射ID，避免重复查询
+const categoryMappingCache = new Map()
+// 缓存用户验证结果（5分钟有效期）
+const userValidationCache = new Map()
+const CACHE_TTL = 5 * 60 * 1000 // 5分钟
+
 // 当前分类名称
 const currentCategoryName = ref('我的分类')
 
-// 根据UUID从数据库获取分类名称
+// 根据UUID从数据库获取分类名称（带缓存）
 const loadCategoryName = async () => {
   const categoryId = route.params.categoryId
-  console.log('路由参数 categoryId:', categoryId)
   
   if (!categoryId) {
     currentCategoryName.value = '我的分类'
     return
   }
   
+  // 检查缓存
+  if (categoryNameCache.has(categoryId)) {
+    currentCategoryName.value = categoryNameCache.get(categoryId)
+    return
+  }
+  
   try {
-    // 直接查询category_templates表获取分类名称
     const { data, error } = await supabase
       .from('category_templates')
       .select('name')
@@ -227,8 +241,9 @@ const loadCategoryName = async () => {
       console.error('查询分类名称失败:', error)
       currentCategoryName.value = '我的分类'
     } else if (data) {
-      console.log('查询到的分类名称:', data.name)
       currentCategoryName.value = data.name
+      // 缓存结果
+      categoryNameCache.set(categoryId, data.name)
     } else {
       currentCategoryName.value = '我的分类'
     }
@@ -238,91 +253,114 @@ const loadCategoryName = async () => {
   }
 }
 
-// 推荐网站数据（根据当前分类名称获取）
+// 推荐网站数据（根据当前分类名称获取）- 使用缓存优化
+const recommendedSitesCache = new Map()
 const recommendedSites = computed(() => {
   const categoryName = currentCategoryName.value
   
-  // 如果分类名称为空或默认值，返回空数组
   if (!categoryName || categoryName === '我的分类') {
     return []
   }
   
-  // 根据分类名称查找对应的分类数据
-  const category = getCategoryByName(categoryName)
-  
-  // 如果找到对应的分类数据，返回该分类的网站列表
-  if (category && category.tools && category.tools.length > 0) {
-    return category.tools
+  // 检查缓存
+  if (recommendedSitesCache.has(categoryName)) {
+    return recommendedSitesCache.get(categoryName)
   }
   
-  // 如果找不到对应的分类数据，返回空数组
-  return []
+  const category = getCategoryByName(categoryName)
+  const result = (category && category.tools && category.tools.length > 0) 
+    ? category.tools 
+    : []
+  
+  // 缓存结果
+  recommendedSitesCache.set(categoryName, result)
+  return result
 })
 
 // 网站数据
 const websites = ref([])
 
-// 删除按钮显示状态
+// 删除按钮显示状态 - 使用 requestAnimationFrame 优化
 const showDeleteIndex = ref(-1)
-// 定时器引用
 const hoverTimers = ref({})
 
-// 从数据库加载网站数据
+// ========== 性能优化：提取公共查询逻辑 ==========
+// 获取用户分类映射ID（带缓存）
+const getCategoryMappingId = async (categoryTemplateId, userId) => {
+  const cacheKey = `${categoryTemplateId}_${userId}`
+  
+  // 检查缓存
+  if (categoryMappingCache.has(cacheKey)) {
+    return categoryMappingCache.get(cacheKey)
+  }
+  
+  // 更新Supabase认证头信息
+  updateSupabaseHeaders()
+  
+  const { data: mappingData, error: mappingError } = await supabase
+    .from('user_category_mappings')
+    .select('id, user_id')
+    .eq('template_id', categoryTemplateId)
+    .eq('user_id', userId)
+    .single()
+  
+  if (mappingError || !mappingData) {
+    return null
+  }
+  
+  // 缓存结果
+  categoryMappingCache.set(cacheKey, mappingData.id)
+  return mappingData.id
+}
+
+// 验证用户ID（带缓存）
+const validateUserWithCache = async (userId) => {
+  // 检查缓存
+  const cached = userValidationCache.get(userId)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.valid
+  }
+  
+  const valid = await validateUserId(userId)
+  // 缓存结果
+  userValidationCache.set(userId, { valid, timestamp: Date.now() })
+  return valid
+}
+
+// 从数据库加载网站数据（优化版本）
 const loadWebsites = async () => {
   try {
     const categoryTemplateId = route.params.categoryId
     
-    console.log('路由参数 categoryId:', categoryTemplateId)
-    
     if (!categoryTemplateId) {
-      console.log('没有分类ID，不加载网站数据')
       websites.value = []
       return
     }
     
-    // 获取当前用户ID
     const user = authStore.user
-    
     if (!user) {
-      console.log('用户未登录，不加载网站数据')
       websites.value = []
       return
     }
     
-    console.log('当前登录用户ID:', user.id)
-    
-    // 验证用户ID是否有效
-    const isValidUser = await validateUserId(user.id)
+    // 使用缓存的验证
+    const isValidUser = await validateUserWithCache(user.id)
     if (!isValidUser) {
-      console.error('用户ID无效，请重新登录')
       websites.value = []
       return
     }
     
-    // 更新Supabase认证头信息
+    // 使用缓存的映射ID
+    const mappingId = await getCategoryMappingId(categoryTemplateId, user.id)
+    if (!mappingId) {
+      websites.value = []
+      return
+    }
+    
     updateSupabaseHeaders()
     
-    // 首先通过category_templates的ID找到对应的user_category_mappings记录
-    console.log('正在查询user_category_mappings表，template_id:', categoryTemplateId, 'user_id:', user.id)
-    const { data: mappingData, error: mappingError } = await supabase
-      .from('user_category_mappings')
-      .select('id, user_id')
-      .eq('template_id', categoryTemplateId)
-      .eq('user_id', user.id)
-      .single()
-    
-    if (mappingError || !mappingData) {
-      console.log('未找到对应的用户分类映射，不加载网站数据，错误详情:', mappingError)
-      websites.value = []
-      return
-    }
-    
-    console.log('找到用户分类映射:', mappingData)
-    
-    // 使用存储过程查询网站数据
-    console.log('正在使用存储过程查询website_links表，category_mapping_id:', mappingData.id)
     const { data, error } = await supabase.rpc('get_website_links', {
-      p_category_mapping_id: mappingData.id,
+      p_category_mapping_id: mappingId,
       p_user_id: user.id
     })
     
@@ -330,8 +368,6 @@ const loadWebsites = async () => {
       console.error('加载网站数据失败:', error)
       websites.value = []
     } else {
-      console.log('从数据库加载网站数据成功:', data)
-      // 转换数据格式以匹配前端需求
       websites.value = data.map(site => ({
         id: site.id,
         name: site.name,
@@ -390,38 +426,34 @@ const isSiteAdded = (site) => {
   return websites.value.some(website => website.url === site.url)
 }
 
-// 移除推荐网站
+// 移除推荐网站（优化版本）
 const removeRecommendedSite = async (site) => {
   try {
-    // 找到对应的网站记录
     const websiteToRemove = websites.value.find(website => website.url === site.url)
     
     if (!websiteToRemove) {
-      console.log('未找到要移除的网站')
       return
     }
     
-    // 获取当前用户ID
     const user = authStore.user
-    
     if (!user) {
       alert('请先登录后再操作')
       return
     }
     
-    console.log('开始移除网站，siteId:', websiteToRemove.id, '用户ID:', user.id)
-    
-    // 验证用户ID是否有效
-    const isValidUser = await validateUserId(user.id)
+    // 使用缓存的验证
+    const isValidUser = await validateUserWithCache(user.id)
     if (!isValidUser) {
       alert('用户ID无效，请重新登录')
       return
     }
     
-    // 更新Supabase认证头信息
     updateSupabaseHeaders()
     
-    // 使用存储过程删除网站记录
+    // 乐观更新：先从前端移除
+    const index = websites.value.findIndex(website => website.url === site.url)
+    const removedSite = index !== -1 ? websites.value.splice(index, 1)[0] : null
+    
     const { error } = await supabase.rpc('delete_website_link', {
       p_id: websiteToRemove.id,
       p_user_id: user.id
@@ -429,67 +461,67 @@ const removeRecommendedSite = async (site) => {
     
     if (error) {
       console.error('移除网站失败:', error)
-      console.error('错误详情:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      })
-      alert('移除网站失败，请重试')
-    } else {
-      console.log('网站移除成功，已从数据库中删除')
-      // 从本地数组中移除该网站
-      const index = websites.value.findIndex(website => website.url === site.url)
-      if (index !== -1) {
-        websites.value.splice(index, 1)
+      // 如果删除失败，恢复数据
+      if (removedSite && index !== -1) {
+        websites.value.splice(index, 0, removedSite)
       }
-      // 重新加载网站数据以确保数据一致性
-      await loadWebsites()
+      alert('移除网站失败，请重试')
     }
+    // 成功则不需要额外操作，数据已经更新
   } catch (error) {
     console.error('移除网站异常:', error)
     alert('移除网站失败，请重试')
   }
 }
 
-// 防抖状态管理
+// ========== 性能优化：改进防抖和加载状态管理 ==========
 const debounceTimers = ref({})
 const loadingStates = ref({})
 
-// 防抖函数
+// 优化的防抖函数（使用 Promise 缓存）
+const debounceCache = new Map()
 const debounce = (func, delay, key) => {
+  // 如果已有相同的请求在处理中，返回该 Promise
+  if (debounceCache.has(key)) {
+    return debounceCache.get(key)
+  }
+  
   // 清除之前的定时器
   if (debounceTimers.value[key]) {
     clearTimeout(debounceTimers.value[key])
   }
   
-  // 设置新的定时器
-  return new Promise((resolve) => {
+  // 创建新的 Promise
+  const promise = new Promise((resolve) => {
     debounceTimers.value[key] = setTimeout(async () => {
       try {
         const result = await func()
         resolve(result)
       } catch (error) {
         resolve(null)
+      } finally {
+        // 清除缓存
+        debounceCache.delete(key)
       }
     }, delay)
   })
+  
+  // 缓存 Promise
+  debounceCache.set(key, promise)
+  return promise
 }
 
-// 直接添加推荐网站（带防抖和异步优化）
+// 直接添加推荐网站（优化版本 - 使用缓存和优化逻辑）
 const addRecommendedSite = async (site) => {
-  const siteKey = site.url // 使用URL作为防抖标识
+  const siteKey = site.url
   
-  // 如果正在加载中，直接返回
   if (loadingStates.value[siteKey]) {
     return
   }
   
-  // 设置加载状态
   loadingStates.value[siteKey] = true
   
   try {
-    // 防抖处理，500ms内只执行一次
     await debounce(async () => {
       const categoryId = route.params.categoryId
       
@@ -498,33 +530,22 @@ const addRecommendedSite = async (site) => {
         return
       }
       
-      // 获取当前用户ID
       const user = authStore.user
-      
       if (!user) {
         alert('请先登录后再添加网站')
         return
       }
       
-      // 验证用户ID是否有效
-      const isValidUser = await validateUserId(user.id)
+      // 使用缓存的验证
+      const isValidUser = await validateUserWithCache(user.id)
       if (!isValidUser) {
         alert('用户ID无效，请重新登录')
         return
       }
       
-      // 更新Supabase认证头信息
-      updateSupabaseHeaders()
-      
-      // 首先通过category_templates的ID找到对应的user_category_mappings记录
-      const { data: mappingData, error: mappingError } = await supabase
-        .from('user_category_mappings')
-        .select('id, user_id')
-        .eq('template_id', categoryId)
-        .eq('user_id', user.id)
-        .single()
-      
-      if (mappingError || !mappingData) {
+      // 使用缓存的映射ID
+      const mappingId = await getCategoryMappingId(categoryId, user.id)
+      if (!mappingId) {
         alert('无法添加网站：未找到对应的分类映射')
         return
       }
@@ -534,27 +555,23 @@ const addRecommendedSite = async (site) => {
         name: site.title,
         url: site.url,
         icon: site.icon || 'uil-globe',
-        category_mapping_id: mappingData.id,
+        category_mapping_id: mappingId,
         user_id: user.id,
         sort_order: websites.value.length + 1
       }
       
-      console.log('准备插入推荐网站到website_links表的数据:', insertData)
-      console.log('当前用户ID:', user.id)
-      console.log('category_mapping_id:', mappingData.id)
-      
-      // 第一步：先在前端展示，提升用户体验
+      // 立即添加到本地数组（乐观更新）
       const tempSite = {
-        id: 'temp_' + Date.now(), // 临时ID
+        id: 'temp_' + Date.now(),
         name: site.title,
         url: site.url,
         icon: site.icon || 'uil-globe'
       }
-      
-      // 立即添加到本地数组
       websites.value.push(tempSite)
       
-      // 第二步：异步保存到数据库
+      updateSupabaseHeaders()
+      
+      // 异步保存到数据库
       const { data, error } = await supabase.rpc('insert_website_link', {
         p_name: insertData.name,
         p_url: insertData.url,
@@ -566,23 +583,13 @@ const addRecommendedSite = async (site) => {
       
       if (error) {
         console.error('添加推荐网站到数据库失败:', error)
-        console.error('错误详情:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        })
-        
-        // 如果数据库保存失败，移除临时数据
+        // 移除临时数据
         const index = websites.value.findIndex(s => s.id === tempSite.id)
         if (index !== -1) {
           websites.value.splice(index, 1)
         }
-        
         alert('添加网站失败，请重试')
       } else {
-        console.log('推荐网站添加成功:', data)
-        
         // 替换临时数据为真实数据
         const tempIndex = websites.value.findIndex(s => s.id === tempSite.id)
         if (tempIndex !== -1) {
@@ -594,12 +601,10 @@ const addRecommendedSite = async (site) => {
           }
         }
         
-        // 可选：重新加载数据确保一致性
-        setTimeout(async () => {
-          await loadWebsites()
-        }, 100)
+        // 清除相关缓存，确保数据一致性
+        categoryMappingCache.delete(`${categoryId}_${user.id}`)
         
-        // 延迟关闭模态框，让用户看到添加成功的效果
+        // 延迟关闭模态框
         setTimeout(() => {
           hideModal()
         }, 800)
@@ -610,7 +615,6 @@ const addRecommendedSite = async (site) => {
     console.error('添加推荐网站异常:', error)
     alert('添加网站失败，请重试')
   } finally {
-    // 清除加载状态
     setTimeout(() => {
       loadingStates.value[siteKey] = false
     }, 600)
@@ -685,93 +689,65 @@ const getDefaultIconUrl = () => {
   return '/src/assets/smile.jpeg'
 }
 
-// 添加网站
+// 添加网站（优化版本）
 const addWebsite = async () => {
-  if (newSite.value.name && newSite.value.url) {
-    try {
-      const categoryId = route.params.categoryId
-      
-      if (!categoryId) {
-        alert('无法添加网站：缺少分类ID')
-        return
-      }
-      
-      // 获取当前用户ID
-      const user = authStore.user
-      
-      if (!user) {
-        alert('请先登录后再添加网站')
-        return
-      }
-      
-      // 验证用户ID是否有效
-      const isValidUser = await validateUserId(user.id)
-      if (!isValidUser) {
-        alert('用户ID无效，请重新登录')
-        return
-      }
-      
-      // 更新Supabase认证头信息
-      updateSupabaseHeaders()
-      
-      // 首先通过category_templates的ID找到对应的user_category_mappings记录
-      const { data: mappingData, error: mappingError } = await supabase
-        .from('user_category_mappings')
-        .select('id, user_id')
-        .eq('template_id', categoryId)
-        .eq('user_id', user.id)
-        .single()
-      
-      if (mappingError || !mappingData) {
-        alert('无法添加网站：未找到对应的分类映射')
-        return
-      }
-      
-      // 准备插入的数据
-      const insertData = {
-        name: newSite.value.name,
-        url: newSite.value.url,
-        icon: 'uil-globe',
-        category_mapping_id: mappingData.id,
-        user_id: user.id,
-        sort_order: websites.value.length + 1
-      }
-      
-      console.log('准备插入到website_links表的数据:', insertData)
-      console.log('当前用户ID:', user.id)
-      console.log('category_mapping_id:', mappingData.id)
-      
-      // 使用存储过程插入数据到数据库
-      const { data, error } = await supabase.rpc('insert_website_link', {
-        p_name: insertData.name,
-        p_url: insertData.url,
-        p_icon: insertData.icon,
-        p_category_mapping_id: insertData.category_mapping_id,
-        p_user_id: insertData.user_id,
-        p_sort_order: insertData.sort_order
-      })
-      
-      if (error) {
-        console.error('添加网站到数据库失败:', error)
-        console.error('错误详情:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        })
-        alert('添加网站失败，请重试')
-      } else {
-        console.log('网站添加成功:', data)
-        // 重新加载网站数据
-        await loadWebsites()
-        hideModal()
-      }
-    } catch (error) {
-      console.error('添加网站异常:', error)
-      alert('添加网站失败，请重试')
-    }
-  } else {
+  if (!newSite.value.name || !newSite.value.url) {
     alert('请填写网站名称和URL')
+    return
+  }
+  
+  try {
+    const categoryId = route.params.categoryId
+    
+    if (!categoryId) {
+      alert('无法添加网站：缺少分类ID')
+      return
+    }
+    
+    const user = authStore.user
+    if (!user) {
+      alert('请先登录后再添加网站')
+      return
+    }
+    
+    // 使用缓存的验证
+    const isValidUser = await validateUserWithCache(user.id)
+    if (!isValidUser) {
+      alert('用户ID无效，请重新登录')
+      return
+    }
+    
+    // 使用缓存的映射ID
+    const mappingId = await getCategoryMappingId(categoryId, user.id)
+    if (!mappingId) {
+      alert('无法添加网站：未找到对应的分类映射')
+      return
+    }
+    
+    updateSupabaseHeaders()
+    
+    const { data, error } = await supabase.rpc('insert_website_link', {
+      p_name: newSite.value.name,
+      p_url: newSite.value.url,
+      p_icon: 'uil-globe',
+      p_category_mapping_id: mappingId,
+      p_user_id: user.id,
+      p_sort_order: websites.value.length + 1
+    })
+    
+    if (error) {
+      console.error('添加网站到数据库失败:', error)
+      alert('添加网站失败，请重试')
+    } else {
+      // 清除相关缓存
+      categoryMappingCache.delete(`${categoryId}_${user.id}`)
+      // 重新加载网站数据
+      await loadWebsites()
+      hideModal()
+    }
+  } catch (error) {
+    console.error('添加网站异常:', error)
+    alert('添加网站失败，请重试')
   }
 }
 
@@ -797,34 +773,34 @@ const handleWebsiteIconError = (event) => {
   event.target.src = '/src/assets/smile.jpeg'
 }
 
-// 显示删除按钮（3秒延迟）
+// 显示删除按钮（优化版本 - 使用 requestAnimationFrame）
 const showDeleteButton = (index) => {
-  // 清除之前的定时器
   if (hoverTimers.value[index]) {
     clearTimeout(hoverTimers.value[index])
   }
   
-  // 设置3秒后显示删除按钮
   hoverTimers.value[index] = setTimeout(() => {
-    showDeleteIndex.value = index
+    requestAnimationFrame(() => {
+      showDeleteIndex.value = index
+    })
   }, 3000)
 }
 
-// 隐藏删除按钮
+// 隐藏删除按钮（优化版本）
 const hideDeleteButton = (index) => {
-  // 清除定时器
   if (hoverTimers.value[index]) {
     clearTimeout(hoverTimers.value[index])
     delete hoverTimers.value[index]
   }
   
-  // 立即隐藏删除按钮
   if (showDeleteIndex.value === index) {
-    showDeleteIndex.value = -1
+    requestAnimationFrame(() => {
+      showDeleteIndex.value = -1
+    })
   }
 }
 
-// 删除分类及其所有网站内容
+// 删除分类及其所有网站内容（优化版本）
 const deleteCategory = async () => {
   const categoryId = route.params.categoryId
   
@@ -838,87 +814,55 @@ const deleteCategory = async () => {
   }
   
   try {
-    // 获取当前用户ID
     const user = authStore.user
-    
     if (!user) {
       alert('请先登录后再操作')
       return
     }
     
-    console.log('开始删除分类，categoryId:', categoryId, '用户ID:', user.id)
-    
-    // 验证用户ID是否有效
-    const isValidUser = await validateUserId(user.id)
+    // 使用缓存的验证
+    const isValidUser = await validateUserWithCache(user.id)
     if (!isValidUser) {
       alert('用户ID无效，请重新登录')
       return
     }
     
-    // 更新Supabase认证头信息
-    updateSupabaseHeaders()
-    
-    // 首先通过category_templates的ID找到对应的user_category_mappings记录
-    const { data: mappingData, error: mappingError } = await supabase
-      .from('user_category_mappings')
-      .select('id, user_id')
-      .eq('template_id', categoryId)
-      .eq('user_id', user.id)
-      .single()
-    
-    if (mappingError || !mappingData) {
+    // 使用缓存的映射ID
+    const mappingId = await getCategoryMappingId(categoryId, user.id)
+    if (!mappingId) {
       alert('无法删除分类：未找到对应的分类映射')
       return
     }
     
-    console.log('找到用户分类映射:', mappingData)
+    updateSupabaseHeaders()
     
     // 先删除该分类下的所有网站内容
-    console.log('开始删除分类下的所有网站内容，category_mapping_id:', mappingData.id)
-    
-    // 使用存储过程删除该分类下的所有网站记录
     const { error: deleteWebsitesError } = await supabase.rpc('delete_website_links_by_category', {
-      p_category_mapping_id: mappingData.id,
+      p_category_mapping_id: mappingId,
       p_user_id: user.id
     })
     
     if (deleteWebsitesError) {
       console.error('删除网站内容失败:', deleteWebsitesError)
-      console.error('错误详情:', {
-        code: deleteWebsitesError.code,
-        message: deleteWebsitesError.message,
-        details: deleteWebsitesError.details,
-        hint: deleteWebsitesError.hint
-      })
       // 继续尝试删除分类映射，不中断流程
-    } else {
-      console.log('分类下的所有网站内容删除成功')
     }
     
     // 删除用户分类映射记录
-    console.log('开始删除用户分类映射记录，mapping_id:', mappingData.id)
-    
-    // 使用存储过程删除用户分类映射
     const { error: deleteMappingError } = await supabase.rpc('delete_user_category_mapping', {
-      p_id: mappingData.id,
+      p_id: mappingId,
       p_user_id: user.id
     })
     
     if (deleteMappingError) {
       console.error('删除用户分类映射失败:', deleteMappingError)
-      console.error('错误详情:', {
-        code: deleteMappingError.code,
-        message: deleteMappingError.message,
-        details: deleteMappingError.details,
-        hint: deleteMappingError.hint
-      })
       throw deleteMappingError
     }
     
-    console.log('分类删除成功')
-    alert('分类删除成功！')
+    // 清除相关缓存
+    categoryNameCache.delete(categoryId)
+    categoryMappingCache.delete(`${categoryId}_${user.id}`)
     
-    // 跳转到首页
+    alert('分类删除成功！')
     router.push('/')
     
   } catch (error) {
@@ -927,91 +871,68 @@ const deleteCategory = async () => {
   }
 }
 
-// 删除网站 - 直接删除数据库记录
+// 删除网站（优化版本 - 乐观更新）
 const deleteWebsite = async (siteId, index) => {
   if (!confirm('确定要删除这个网站吗？')) {
     return
   }
   
   try {
-    // 获取当前用户ID
     const user = authStore.user
-    
     if (!user) {
       alert('请先登录后再操作')
       return
     }
     
-    console.log('开始删除网站，siteId:', siteId, '用户ID:', user.id)
-    
-    // 验证用户ID是否有效
-    const isValidUser = await validateUserId(user.id)
+    // 使用缓存的验证
+    const isValidUser = await validateUserWithCache(user.id)
     if (!isValidUser) {
       alert('用户ID无效，请重新登录')
       return
     }
     
-    // 更新Supabase认证头信息
+    // 乐观更新：先从前端移除
+    const removedSite = websites.value.splice(index, 1)[0]
+    
     updateSupabaseHeaders()
     
-    // 直接删除数据库中的网站记录 - 使用存储过程绕过RLS
-    console.log('执行删除操作，条件: id=', siteId, 'user_id=', user.id)
-    
-    // 使用存储过程删除网站记录
     const { error } = await supabase.rpc('delete_website_link', {
       p_id: siteId,
       p_user_id: user.id
     })
     
     if (error) {
-      console.error('存储过程删除失败:', error)
-      console.error('错误详情:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      })
-      throw error
-    }
-    
-    if (error) {
       console.error('删除网站失败:', error)
-      console.error('错误详情:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      })
+      // 如果删除失败，恢复数据
+      websites.value.splice(index, 0, removedSite)
       alert('删除网站失败，请重试')
-    } else {
-      console.log('网站删除成功，已从数据库中删除')
-      // 从本地数组中移除该网站
-      websites.value.splice(index, 1)
-      // 重新加载网站数据以确保数据一致性
-      await loadWebsites()
     }
+    // 成功则不需要额外操作
   } catch (error) {
     console.error('删除网站异常:', error)
     alert('删除网站失败，请重试')
   }
 }
 
-// 监听路由参数变化
-import { watch } from 'vue'
-
-watch(() => route.params.categoryId, async (newCategoryId) => {
-  console.log('路由参数变化，新的categoryId:', newCategoryId)
+// 监听路由参数变化（优化版本 - 清除缓存）
+watch(() => route.params.categoryId, async (newCategoryId, oldCategoryId) => {
+  // 清除旧分类的缓存
+  if (oldCategoryId) {
+    categoryNameCache.delete(oldCategoryId)
+    // 清除相关映射缓存
+    const user = authStore.user
+    if (user) {
+      categoryMappingCache.delete(`${oldCategoryId}_${user.id}`)
+    }
+  }
   await loadCategoryName()
   await loadWebsites()
 })
 
 // 初始化
 onMounted(async () => {
-  console.log('分类页面加载完成')
   await loadCategoryName()
   await loadWebsites()
-  console.log('路由参数 categoryId:', route.params.categoryId)
-  console.log('推荐网站数据:', recommendedSites.value)
 })
 </script>
 
@@ -1394,6 +1315,8 @@ onMounted(async () => {
   display: -webkit-box;
   -webkit-line-clamp: 1; /* 最多显示1行 */
   -webkit-box-orient: vertical;
+  line-clamp: 1; /* 标准属性，用于兼容性 */
+  line-clamp: 1; /* 标准属性，用于兼容性 */
 }
 
 .site-desc {
@@ -1406,6 +1329,8 @@ onMounted(async () => {
   display: -webkit-box;
   -webkit-line-clamp: 1; /* 最多显示1行 */
   -webkit-box-orient: vertical;
+  line-clamp: 1; /* 标准属性，用于兼容性 */
+  line-clamp: 1; /* 标准属性，用于兼容性 */
 }
 
 /* 添加按钮 - 调整尺寸和位置 */

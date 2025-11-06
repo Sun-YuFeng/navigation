@@ -15,13 +15,20 @@
     <div class="nav">
       <ul>
         <li v-for="item in navItems" :key="item.id">
-          <a href="#" @click.prevent="handleNavClick(item)">{{ item.name }}</a>
+          <a href="#" 
+             @click.prevent="handleNavClick(item)"
+             :class="{ active: currentNav === item.id }">{{ item.name }}</a>
         </li>
       </ul>
     </div>
     
     <!-- 主内容区域 -->
     <div class="main-content">
+      <!-- AuthorCard组件 - 固定在左侧 -->
+      <div class="author-card-container">
+        <AuthorCard :author-info="authorInfo" @follow="handleFollow" @private-message="handlePrivateMessage" />
+      </div>
+      
       <!-- 根据当前选中的导航项显示不同内容 -->
       <div v-if="currentNav === 'recently'" class="content-section">
         <h2>最近动态</h2>
@@ -39,12 +46,9 @@
             :likes="post.likes"
             :favorites="post.favorites"
             :comments="post.comments"
+            @cardClick="handlePostClick(post.id)"
           />
         </div>
-      </div>
-      
-      <div v-if="currentNav === 'home'" class="content-section">
-        <h2>个人主页</h2>
       </div>
       
       <div v-if="currentNav === 'workflow'" class="content-section">
@@ -63,6 +67,7 @@
             :likes="post.likes"
             :favorites="post.favorites"
             :comments="post.comments"
+            @cardClick="handlePostClick(post.id)"
           />
         </div>
       </div>
@@ -83,55 +88,8 @@
             :likes="post.likes"
             :favorites="post.favorites"
             :comments="post.comments"
+            @cardClick="handlePostClick(post.id)"
           />
-        </div>
-      </div>
-      
-      <div v-if="currentNav === 'personal_data'" class="content-section">
-        <h2>资料编辑</h2>
-        <div class="profile-edit">
-          <div class="edit-form">
-            <div class="form-group">
-              <label>昵称：</label>
-              <input type="text" v-model="userProfile.nickname">
-            </div>
-            <div class="form-group">
-              <label>个性签名：</label>
-              <textarea v-model="userProfile.signature"></textarea>
-            </div>
-            <button class="save-btn">保存修改</button>
-          </div>
-        </div>
-      </div>
-      
-      <div v-if="currentNav === 'attention'" class="content-section">
-        <h2>关注</h2>
-        <div class="attention-content">
-          <div class="attention-item">
-            <h3>关注的人</h3>
-            <p>查看你关注的好友动态</p>
-          </div>
-          <div class="attention-item">
-            <h3>粉丝</h3>
-            <p>关注你的用户列表</p>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="currentNav === 'personal_data'" class="content-section">
-        <h2>资料编辑</h2>
-        <div class="profile-edit">
-          <div class="edit-form">
-            <div class="form-group">
-              <label>昵称：</label>
-              <input type="text" v-model="userProfile.nickname">
-            </div>
-            <div class="form-group">
-              <label>个性签名：</label>
-              <textarea v-model="userProfile.signature"></textarea>
-            </div>
-            <button class="save-btn">保存修改</button>
-          </div>
         </div>
       </div>
       
@@ -156,23 +114,35 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { supabase } from '../supabase.js'
 import CompactCard from '../components/CompactCard.vue'
+import AuthorCard from '../components/AuthorCard.vue'
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 // 用户信息
-const userAvatar = ref('https://via.placeholder.com/100/FFCC00/333333?Text=柴犬')
+const userAvatar = ref('/src/assets/default-avatar.png')
 const userNickname = ref('')
 
-
+// AuthorCard组件数据
+const authorInfo = ref({
+  name: '',
+  avatar: '',
+  bio: '',
+  articleCount: 0,
+  likeCount: 0,
+  favoriteCount: 0,
+  followerCount: 0
+})
 
 // 导航菜单
 const navItems = ref([
   { id: 'recently', name: '最近' },
   { id: 'workflow', name: '工作流' },
   { id: 'collect', name: '收藏' },
-  { id: 'personal_data', name: '资料编辑' },
   { id: 'attention', name: '关注' },
 ])
 
@@ -188,138 +158,309 @@ const userProfile = ref({
 })
 
 // 帖子数据
-const posts = ref([
-  {
-    id: 1,
-    avatar: 'https://picsum.photos/id/64/100/100',
-    userName: '枫。',
-    publishTime: '2小时前',
-    imageUrl: 'https://picsum.photos/id/0/600/400',
-    title: '用n8n自动同步Notion数据到Excel的工作流',
-    description: '无需代码，通过3个节点实现Notion数据库新增内容自动写入Excel，附详细步骤图和配置说明。',
-    tags: ['n8n', '办公自动化', '开源免费'],
-    likes: 128,
-    favorites: 56,
-    comments: 12
-  },
-  {
-    id: 2,
-    avatar: 'https://picsum.photos/id/64/100/100',
-    userName: '枫。',
-    publishTime: '5小时前',
-    imageUrl: 'https://picsum.photos/id/1/600/400',
-    title: 'Vue3 + TypeScript最佳实践指南',
-    description: '分享在大型项目中Vue3和TypeScript的结合使用经验，包括类型定义、组件设计模式等。',
-    tags: ['Vue3', 'TypeScript', '前端开发'],
-    likes: 89,
-    favorites: 34,
-    comments: 8
-  },
-  {
-    id: 3,
-    avatar: 'https://picsum.photos/id/64/100/100',
-    userName: '枫。',
-    publishTime: '1天前',
-    imageUrl: 'https://picsum.photos/id/2/600/400',
-    title: 'Docker容器化部署实战',
-    description: '从零开始学习Docker，包含镜像构建、容器编排、网络配置等实战内容。',
-    tags: ['Docker', '容器化', 'DevOps'],
-    likes: 156,
-    favorites: 67,
-    comments: 15
-  },
-  {
-    id: 4,
-    avatar: 'https://picsum.photos/id/65/100/100',
-    userName: '技术达人',
-    publishTime: '3天前',
-    imageUrl: 'https://picsum.photos/id/3/600/400',
-    title: 'React Hooks深度解析',
-    description: '深入理解React Hooks的工作原理和使用技巧，包含自定义Hooks的实战案例。',
-    tags: ['React', 'Hooks', '前端框架'],
-    likes: 234,
-    favorites: 89,
-    comments: 23
-  },
-  {
-    id: 5,
-    avatar: 'https://picsum.photos/id/66/100/100',
-    userName: '编程爱好者',
-    publishTime: '1周前',
-    imageUrl: 'https://picsum.photos/id/4/600/400',
-    title: 'Python数据分析入门',
-    description: '使用Pandas和Matplotlib进行数据分析和可视化，适合初学者入门。',
-    tags: ['Python', '数据分析', '可视化'],
-    likes: 178,
-    favorites: 45,
-    comments: 9
+const posts = ref([])
+const recentPosts = ref([])
+const hotPosts = ref([])
+const collectedPosts = ref([])
+
+// 加载用户文章数据
+const loadUserArticles = async () => {
+  try {
+    if (!authStore.user?.id) {
+      console.log('用户未登录')
+      return
+    }
+
+    // 查询当前用户的所有文章，按创建时间倒序排列（用于最近动态）
+    const { data: articles, error } = await supabase
+      .from('articles')
+      .select('*')
+      .eq('user_id', authStore.user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('查询文章失败:', error)
+      return
+    }
+
+    // 获取用户信息
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('display_name, avatar_url')
+      .eq('id', authStore.user.id)
+      .single()
+
+    if (profileError) {
+      console.error('查询用户信息失败:', profileError)
+    }
+
+    // 转换数据格式以匹配CompactCard组件
+    const formattedPosts = articles.map(article => {
+      // 解析tags字段，与market.vue保持一致
+      let tags = []
+      try {
+        const tagData = JSON.parse(article.tags || '{}')
+        if (tagData.content_type) tags.push(tagData.content_type)
+        if (tagData.scenes && Array.isArray(tagData.scenes)) {
+          tags = tags.concat(tagData.scenes.slice(0, 2))
+        }
+        if (tagData.attributes && Array.isArray(tagData.attributes)) {
+          tags = tags.concat(tagData.attributes.slice(0, 1))
+        }
+      } catch (e) {
+        console.warn('解析tags字段失败:', e)
+      }
+      
+      // 如果没有解析到tags，使用默认tags
+      if (tags.length === 0) {
+        tags = ['工作流', '自动化']
+      }
+      
+      return {
+        id: article.id,
+        avatar: userProfile?.avatar_url || '/src/assets/default-avatar.png',
+        userName: userProfile?.display_name || authStore.user.email || '匿名用户',
+        publishTime: formatTimeAgo(article.created_at),
+        imageUrl: article.cover_image || 'https://picsum.photos/id/0/600/400',
+        title: article.article_title,
+        description: article.description || '暂无描述',
+        tags: tags,
+        likes: article.like_count || 0,
+        favorites: article.favorite_count || 0,
+        comments: 0 // 暂时设为0，后续可以添加评论功能
+      }
+    })
+
+    posts.value = formattedPosts
+    recentPosts.value = formattedPosts // 最近动态按创建时间排序
+    
+    // 工作流区域按点赞数排序（前端排序）
+    hotPosts.value = [...formattedPosts].sort((a, b) => b.likes - a.likes)
+    
+    // 更新AuthorCard的原创字段为实际文章数量
+    authorInfo.value.articleCount = formattedPosts.length
+    
+    console.log('加载用户文章成功:', formattedPosts.length)
+  } catch (error) {
+    console.error('加载文章数据失败:', error)
   }
-])
-
-// 收藏的帖子数据
-const collectedPosts = ref([
-  {
-    id: 6,
-    avatar: 'https://picsum.photos/id/67/100/100',
-    userName: '架构师',
-    publishTime: '2天前',
-    imageUrl: 'https://picsum.photos/id/5/600/400',
-    title: '微服务架构设计模式',
-    description: '深入探讨微服务架构的各种设计模式，包括服务发现、负载均衡、熔断器等。',
-    tags: ['微服务', '架构设计', '分布式'],
-    likes: 312,
-    favorites: 123,
-    comments: 31
-  },
-  {
-    id: 7,
-    avatar: 'https://picsum.photos/id/68/100/100',
-    userName: '全栈工程师',
-    publishTime: '4天前',
-    imageUrl: 'https://picsum.photos/id/6/600/400',
-    title: 'Node.js性能优化指南',
-    description: '分享Node.js应用的性能优化技巧，包括内存管理、异步编程、集群部署等。',
-    tags: ['Node.js', '性能优化', '后端开发'],
-    likes: 189,
-    favorites: 78,
-    comments: 17
-  }
-])
-
-// 计算属性：按时间排序的帖子（最近）
-const recentPosts = computed(() => {
-  return [...posts.value].sort((a, b) => {
-    // 简单的按ID排序模拟时间排序
-    return b.id - a.id
-  })
-})
-
-// 计算属性：按热度排序的帖子（工作流）
-const hotPosts = computed(() => {
-  return [...posts.value].sort((a, b) => b.likes - a.likes)
-})
-
-// 处理导航点击
-const handleNavClick = (item) => {
-  currentNav.value = item.id
 }
 
-// 初始化时加载用户信息
-onMounted(() => {
-  if (authStore.user) {
-    // 如果有用户信息，使用真实数据
-    const nickname = authStore.user.displayName || authStore.user.nickname || '用户'
-    userNickname.value = nickname
-    userAvatar.value = authStore.user.avatar || authStore.user.avatar_url || userAvatar.value
-    
-    // 更新用户资料
-    userProfile.value.nickname = nickname
-    userProfile.value.signature = authStore.user.signature || userProfile.value.signature
-  } else {
-    // 如果没有用户信息，使用默认值
-    userNickname.value = '用户'
-    userProfile.value.nickname = '用户'
+// 加载用户收藏的帖子
+const loadUserFavorites = async () => {
+  try {
+    if (!authStore.user?.id) {
+      console.log('用户未登录')
+      return
+    }
+
+    // 查询用户收藏的帖子
+    const { data: favorites, error } = await supabase
+      .from('user_favorites')
+      .select(`
+        article_id,
+        created_at,
+        articles (
+          id,
+          article_title,
+          description,
+          cover_image,
+          tags,
+          like_count,
+          favorite_count,
+          created_at,
+          user_id,
+          users!articles_user_id_fkey (
+            user_profiles (
+              display_name,
+              avatar_url
+            )
+          )
+        )
+      `)
+      .eq('user_id', authStore.user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('查询收藏失败:', error)
+      return
+    }
+
+    // 转换数据格式以匹配CompactCard组件
+    const formattedFavorites = favorites.map(fav => {
+      const article = fav.articles
+      if (!article) return null
+      
+      // 解析tags字段
+      let tags = []
+      try {
+        const tagData = JSON.parse(article.tags || '{}')
+        if (tagData.content_type) tags.push(tagData.content_type)
+        if (tagData.scenes && Array.isArray(tagData.scenes)) {
+          tags = tags.concat(tagData.scenes.slice(0, 2))
+        }
+        if (tagData.attributes && Array.isArray(tagData.attributes)) {
+          tags = tags.concat(tagData.attributes.slice(0, 1))
+        }
+      } catch (e) {
+        console.warn('解析tags字段失败:', e)
+      }
+      
+      // 如果没有解析到tags，使用默认tags
+      if (tags.length === 0) {
+        tags = ['工作流', '自动化']
+      }
+      
+      return {
+        id: article.id,
+        avatar: article.users?.user_profiles?.avatar_url || '/src/assets/default-avatar.png',
+        userName: article.users?.user_profiles?.display_name || '匿名用户',
+        publishTime: formatTimeAgo(article.created_at),
+        imageUrl: article.cover_image || 'https://picsum.photos/id/0/600/400',
+        title: article.article_title,
+        description: article.description || '暂无描述',
+        tags: tags,
+        likes: article.like_count || 0,
+        favorites: article.favorite_count || 0,
+        comments: 0
+      }
+    }).filter(Boolean) // 过滤掉null值
+
+    collectedPosts.value = formattedFavorites
+    console.log('加载用户收藏成功:', formattedFavorites.length)
+  } catch (error) {
+    console.error('加载收藏数据失败:', error)
   }
+}
+
+// 格式化时间显示
+const formatTimeAgo = (timestamp) => {
+  const now = new Date()
+  const postTime = new Date(timestamp)
+  const diffInSeconds = Math.floor((now - postTime) / 1000)
+  
+  if (diffInSeconds < 60) {
+    return '刚刚'
+  } else if (diffInSeconds < 3600) {
+    return `${Math.floor(diffInSeconds / 60)}分钟前`
+  } else if (diffInSeconds < 86400) {
+    return `${Math.floor(diffInSeconds / 3600)}小时前`
+  } else if (diffInSeconds < 2592000) {
+    return `${Math.floor(diffInSeconds / 86400)}天前`
+  } else {
+    return postTime.toLocaleDateString('zh-CN')
+  }
+}
+
+// 处理导航点击
+const handleNavClick = async (item) => {
+  currentNav.value = item.id
+  
+  // 如果点击的是收藏，加载收藏数据
+  if (item.id === 'collect') {
+    await loadUserFavorites()
+  }
+}
+
+// 处理帖子点击，跳转到详情页
+const handlePostClick = async (postId) => {
+  if (postId) {
+    try {
+      // 先调用数据库函数增加浏览量
+      const { error } = await supabase.rpc('increment_article_view_count', {
+        article_uuid: postId
+      })
+      
+      if (error) {
+        console.error('增加浏览量失败:', error)
+      } else {
+        console.log(`文章 ${postId} 浏览量已增加`)
+      }
+    } catch (err) {
+      console.error('调用增加浏览量函数时出错:', err)
+    }
+    
+    // 跳转到详情页
+    router.push(`/detail/${postId}`)
+  }
+}
+
+// AuthorCard组件事件处理
+const handleFollow = (author) => {
+  console.log('关注作者:', author.name)
+  // 这里可以添加关注逻辑
+}
+
+// 从数据库获取用户资料
+const fetchUserProfile = async () => {
+  try {
+    if (authStore.user) {
+      // 查询用户资料表 - 使用id字段而不是user_id
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', authStore.user.id)
+        .single()
+      
+      if (error) {
+        console.error('获取用户资料失败:', error)
+        // 使用默认数据
+        setDefaultUserData()
+        return
+      }
+      
+      if (data) {
+        // 更新用户信息
+        userNickname.value = data.display_name || '用户'
+        userAvatar.value = data.avatar_url || '/src/assets/default-avatar.png'
+        
+        // 更新AuthorCard数据
+        authorInfo.value = {
+          name: data.display_name || '用户',
+          avatar: data.avatar_url || '/src/assets/default-avatar.png',
+          bio: data.bio || '热爱生活，热爱编程！专注于前端开发和自动化工具',
+          articleCount: 0, // 这些字段在表中不存在，使用默认值
+          likeCount: 0,
+          favoriteCount: 0,
+          followerCount: 0
+        }
+        
+        // 更新用户资料
+        userProfile.value.nickname = data.display_name || '用户'
+        userProfile.value.signature = data.bio || '热爱生活，热爱编程！'
+      } else {
+        // 如果没有用户资料记录，使用默认数据
+        setDefaultUserData()
+      }
+    } else {
+      // 如果没有用户信息，使用默认值
+      setDefaultUserData()
+    }
+  } catch (error) {
+    console.error('获取用户资料时发生错误:', error)
+    setDefaultUserData()
+  }
+}
+
+// 设置默认用户数据
+const setDefaultUserData = () => {
+  userNickname.value = '用户'
+  userProfile.value.nickname = '用户'
+  authorInfo.value = {
+    name: '枫。',
+    avatar: '/src/assets/default-avatar.png',
+    bio: '热爱生活，热爱编程！专注于前端开发和自动化工具',
+    articleCount: 37,
+    likeCount: 1117,
+    favoriteCount: 4286,
+    followerCount: 667
+  }
+}
+
+// 初始化时加载用户信息和文章数据
+onMounted(async () => {
+  await fetchUserProfile()
+  await loadUserArticles()
 })
 </script>
 
@@ -342,23 +483,23 @@ onMounted(() => {
 /* 头像区域样式，设置正方形 */
 .avatar-area {
   position: absolute;
-  left: 250px; /* 增加左边距，整体向右移动150px */
-  bottom: -50px; /* 让头像部分超出头部背景，形成悬浮效果 */
+  left: 200px; /* 缩小左边距 */
+  bottom: -50px; /* 减少超出头部背景的距离 */
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 15px; /* 缩小间距 */
 }
 
 .avatar {
-  width: 150px;
+  width: 150px; /* 缩小头像尺寸 */
   height: 150px;
   border-radius: 8px; /* 改为圆角正方形 */
-  border: 3px solid #fff;
+  border: 2px solid #fff; /* 缩小边框 */
   overflow: hidden;
   background-color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-  transform: translateY(-20px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* 缩小阴影 */
+  transform: translateY(-15px); /* 减少上移距离 */
   transition: all 0.3s ease;
 }
 
@@ -370,7 +511,7 @@ onMounted(() => {
 
 .nickname {
   color: #ffffff;
-  font-size: 24px;
+  font-size: 20px; /* 缩小字体大小 */
   font-weight: bold;
   text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
@@ -378,10 +519,10 @@ onMounted(() => {
 /* 空间标题样式 */
 .space-title {
   position: absolute;
-  left: 250px; /* 与头像左对齐 */
+  left: 200px; /* 与缩小后的头像左对齐 */
   top: 25px;
   color: white;
-  font-size: 28px;
+  font-size: 24px; /* 缩小字体大小 */
   font-weight: bold;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
@@ -392,7 +533,7 @@ onMounted(() => {
   border-bottom: 1px solid #ddd;
   height: 50px;
   line-height: 50px;
-  padding-left: 450px; /* 增加左边距，整体向右移动150px */
+  padding-left: 430px; /* 向右移动30px */
 }
 
 .nav ul {
@@ -420,10 +561,29 @@ onMounted(() => {
   background-color: #e9ecef;
 }
 
+.nav ul li a.active {
+  color: #007bff;
+  background-color: #e9ecef;
+  font-weight: bold;
+  border-bottom: 2px solid #007bff;
+}
+
 /* 主内容区域 */
 .main-content {
   padding: 30px;
   margin-left: 50px; /* 整体向右移动50px，比原来往左增加100px */
+  display: flex;
+  flex-direction: row; /* 确保AuthorCard在content-section的左边 */
+  gap: 15px; /* AuthorCard和content-section之间的间距 */
+}
+
+/* AuthorCard容器样式 */
+.author-card-container {
+  flex-shrink: 0;
+  width: 300px; /* 固定AuthorCard的宽度 */
+  position: sticky;
+  top: 30px; /* 固定在顶部 */
+  height: fit-content;
 }
 
 /* 帖子网格样式 */
@@ -448,7 +608,7 @@ onMounted(() => {
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-  margin-left: 350px; /* 与导航栏的'最近'按钮左对齐 */
+  flex: 1; /* 占据剩余空间 */
   margin-right: 100px; /* 缩短宽度，右边留出更多空间（增加50px） */
 }
 
@@ -459,7 +619,23 @@ onMounted(() => {
   padding-bottom: 10px;
 }
 
-
-
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+    padding: 15px;
+    margin-left: 0;
+    gap: 20px;
+  }
+  
+  .author-card-container {
+    width: 100%;
+    position: static;
+  }
+  
+  .content-section {
+    margin-right: 0;
+  }
+}
 
 </style>

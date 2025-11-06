@@ -42,13 +42,13 @@
     <!-- 互动数据区域 -->
     <div class="card-actions">
       <div class="action-group">
-        <div class="action-item" :class="{ active: isLiked }" @click="handleLike">
+        <div class="action-item">
           <i class="uil uil-thumbs-up"></i>
-          <span>{{ isLiked ? likes + 1 : likes }}</span>
+          <span>{{ likes }}</span>
         </div>
-        <div class="action-item" :class="{ active: isFavorited }" @click="handleFavorite">
+        <div class="action-item">
           <i class="uil uil-star"></i>
-          <span>{{ isFavorited ? favorites + 1 : favorites }}</span>
+          <span>{{ favorites }}</span>
         </div>
         <div class="action-item" @click="handleComment">
           <i class="uil uil-comment-alt"></i>
@@ -113,24 +113,7 @@ const props = defineProps({
 })
 
 // 定义组件事件
-const emit = defineEmits(['like', 'favorite', 'comment', 'detail', 'cardClick'])
-
-// 图标状态管理
-const isLiked = ref(false)
-const isFavorited = ref(false)
-
-// 事件处理函数
-const handleLike = () => {
-  isLiked.value = !isLiked.value
-  const newLikes = isLiked.value ? props.likes + 1 : props.likes - 1
-  emit('like', newLikes)
-}
-
-const handleFavorite = () => {
-  isFavorited.value = !isFavorited.value
-  const newFavorites = isFavorited.value ? props.favorites + 1 : props.favorites - 1
-  emit('favorite', newFavorites)
-}
+const emit = defineEmits(['comment', 'detail', 'cardClick'])
 
 const handleComment = () => {
   emit('comment')
@@ -288,35 +271,7 @@ const handleCardClick = (e) => {
   color: #165DFF;
 }
 
-/* 点赞图标样式 - 蓝色 */
-.action-item:first-child.active {
-  color: #165DFF;
-}
 
-.action-item:first-child.active i {
-  font-weight: bold;
-  text-shadow: 0 0 2px rgba(22, 93, 255, 0.3);
-}
-
-/* 收藏图标样式 - 黄色 */
-.action-item:nth-child(2).active {
-  color: #FFC53D;
-}
-
-.action-item:nth-child(2).active i {
-  font-weight: bold;
-  text-shadow: 0 0 2px rgba(255, 197, 61, 0.3);
-}
-
-/* 评论图标保持默认样式 */
-.action-item:nth-child(3).active {
-  color: #165DFF;
-}
-
-.action-item:nth-child(3).active i {
-  font-weight: bold;
-  text-shadow: 0 0 2px rgba(22, 93, 255, 0.3);
-}
 
 .detail-link {
   color: #165DFF;

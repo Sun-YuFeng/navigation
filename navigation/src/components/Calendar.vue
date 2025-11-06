@@ -1,48 +1,62 @@
 <template>
   <div class="calendar-card">
-    <div class="calendar-header">
-      <h3>{{ title }}</h3>
-      <div class="calendar-controls">
-        <button @click="previousMonth" class="nav-btn">‹</button>
-        <span class="current-month">{{ currentMonthYear }}</span>
-        <button @click="nextMonth" class="nav-btn">›</button>
+    <!-- 简洁模式：显示今天的日期信息 -->
+    <div v-if="compactMode" class="calendar-compact">
+      <div class="day-box">
+        <div class="day">{{ todayDate }}</div>
+      </div>
+      <div class="info-box">
+        <div class="year-month">{{ yearMonth }}</div>
+        <div class="week">{{ weekdayShort }}</div>
       </div>
     </div>
     
-    <div class="calendar-wrapper">
-      <div class="calendar-grid">
-        <!-- 星期标题 -->
-        <div class="weekdays">
-          <div v-for="day in weekdays" :key="day" class="weekday">
-            {{ day }}
-          </div>
+    <!-- 完整模式：显示完整日历 -->
+    <template v-else>
+      <div class="calendar-header">
+        <h3>{{ title }}</h3>
+        <div class="calendar-controls">
+          <button @click="previousMonth" class="nav-btn">‹</button>
+          <span class="current-month">{{ currentMonthYear }}</span>
+          <button @click="nextMonth" class="nav-btn">›</button>
         </div>
-        
-        <!-- 日期网格 -->
-        <div class="days-grid">
-          <div
-            v-for="day in calendarDays"
-            :key="`${day.date}-${day.month}`"
-            :class="[
-              'day-cell',
-              {
-                'other-month': !day.isCurrentMonth,
-                'today': day.isToday,
-                'selected': day.isSelected
-              }
-            ]"
-            @click="selectDate(day)"
-          >
-            <span class="day-number">{{ day.date }}</span>
+      </div>
+      
+      <div class="calendar-wrapper">
+        <div class="calendar-grid">
+          <!-- 星期标题 -->
+          <div class="weekdays">
+            <div v-for="day in weekdays" :key="day" class="weekday">
+              {{ day }}
+            </div>
+          </div>
+          
+          <!-- 日期网格 -->
+          <div class="days-grid">
+            <div
+              v-for="day in calendarDays"
+              :key="`${day.date}-${day.month}`"
+              :class="[
+                'day-cell',
+                {
+                  'other-month': !day.isCurrentMonth,
+                  'today': day.isToday,
+                  'selected': day.isSelected
+                }
+              ]"
+              @click="selectDate(day)"
+            >
+              <span class="day-number">{{ day.date }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 export default {
   name: 'Calendar',
@@ -50,14 +64,38 @@ export default {
     title: {
       type: String,
       default: '日历'
+    },
+    compactMode: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['date-selected', 'date-clicked'],
   setup(props, { emit }) {
     const currentDate = ref(new Date())
     const selectedDate = ref(null)
+    const today = ref(new Date())
     
     const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+    const weekdaysFull = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+    
+    // 简洁模式的数据
+    const todayDate = computed(() => {
+      return today.value.getDate()
+    })
+    
+    const yearMonth = computed(() => {
+      const year = today.value.getFullYear()
+      const month = today.value.getMonth() + 1
+      return `${year}年${month}月`
+    })
+    
+    const weekdayShort = computed(() => {
+      return `星期${weekdays[today.value.getDay()]}`
+    })
+    
+    // 更新时间的定时器
+    let updateTimer = null
     
     const currentMonthYear = computed(() => {
       const year = currentDate.value.getFullYear()
@@ -159,19 +197,36 @@ export default {
     
     onMounted(() => {
       // 初始化时选择今天
-      const today = new Date()
-      selectedDate.value = today
+      const todayObj = new Date()
+      selectedDate.value = todayObj
+      
+      // 如果使用简洁模式，设置定时器每天更新一次（日期）
+      if (props.compactMode) {
+        updateTimer = setInterval(() => {
+          today.value = new Date()
+        }, 60000) // 每分钟更新一次（检查日期是否变化）
+      }
+    })
+    
+    onUnmounted(() => {
+      if (updateTimer) {
+        clearInterval(updateTimer)
+      }
     })
     
     return {
       currentDate,
       selectedDate,
+      today,
       weekdays,
       currentMonthYear,
       calendarDays,
       selectDate,
       previousMonth,
-      nextMonth
+      nextMonth,
+      todayDate,
+      yearMonth,
+      weekdayShort
     }
   }
 }
@@ -185,6 +240,84 @@ export default {
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+/* 简洁模式下覆盖默认样式 */
+.calendar-card:has(.calendar-compact) {
+  max-width: 100%;
+  margin: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+/* 简洁模式样式 */
+.calendar-compact {
+  display: flex;
+  background-color: #f5f5f5;
+  color: #333;
+  border-radius: 16px;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  font-family: "微软雅黑", "Microsoft YaHei", sans-serif;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.day-box {
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  width: 40%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.day {
+  font-size: 60px;
+  color: #ff3333;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.info-box {
+  padding: 20px;
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 100%;
+  background-color: #f5f5f5;
+}
+
+.year-month {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.2;
+  text-align: left;
+  margin-bottom: 0;
+  margin-left: -3px;
+}
+
+.week {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.2;
+  text-align: left;
+  margin-bottom: 0;
+  margin-left: -3px;
 }
 
 .calendar-header {

@@ -62,11 +62,10 @@ const handleSignUp = async () => {
   try {
     await authStore.signUp(formData.value.username, formData.value.password)
     errorMessage.value = '注册成功！'
-    // 3秒后切换到登录界面
+    // 注册成功后直接跳转到首页
     setTimeout(() => {
-      isLogin.value = true
-      formData.value.confirmPassword = ''
-    }, 3000)
+      router.push('/')
+    }, 1000)
   } catch (error) {
     errorMessage.value = error.message || '注册失败'
   } finally {
@@ -132,7 +131,7 @@ const toggleMode = () => {
               >
             </div>
 
-            <div v-if="errorMessage" class="error-message">
+            <div v-if="errorMessage" :class="['message', errorMessage.includes('成功') ? 'success-message' : 'error-message']">
               {{ errorMessage }}
             </div>
 
@@ -246,14 +245,23 @@ const toggleMode = () => {
   border-color: #667eea;
 }
 
-.error-message {
-  background-color: #fee;
-  color: #c33;
+.message {
   padding: 10px;
   border-radius: 6px;
   margin-bottom: 15px;
   font-size: 14px;
   text-align: center;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c33;
+}
+
+.success-message {
+  background-color: #efe;
+  color: #2a7;
+  border: 1px solid #2a7;
 }
 
 .submit-btn {

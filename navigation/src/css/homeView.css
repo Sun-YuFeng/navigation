@@ -43,7 +43,7 @@
   display: flex;
   max-width: 500px;
   width: 100%;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   border-radius: 25px;
   overflow: hidden;
   background: white;
@@ -71,25 +71,60 @@
 
 
 /* 网格样式 - 手机桌面风格 */
-.grid-container {
+/* 覆盖式桌面网格 */
+.grid-wrapper {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.grid-background {
   display: grid;
   grid-template-columns: repeat(10, minmax(80px, 1fr));
   grid-template-rows: repeat(4, minmax(100px, 1fr));
   gap: 12px;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 20px;
-  position: relative;
-  grid-auto-flow: row dense;
-  align-items: start;
-  justify-items: center;
-  transition: grid-template-rows 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  background: transparent;
+  border-radius: 20px;
+  padding: 8px;
+}
+
+.grid-cell {
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  aspect-ratio: 1 / 1;
+  transition: all 0.3s ease;
+}
+
+/* 拖拽时显示网格 */
+.grid-background.dragging {
+  background: rgba(102, 126, 234, 0.03);
+  transition: background 0.2s ease;
+}
+
+.grid-background.dragging .grid-cell {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(102, 126, 234, 0.4);
+  box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.15) inset;
+  transition: all 0.2s ease;
+}
+
+.grid-overlay {
+  position: absolute;
+  inset: 20px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.overlay-item {
+  pointer-events: auto;
 }
 
 .grid-item {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
   overflow: hidden;
   display: flex;
@@ -121,8 +156,9 @@
 }
 
 .chosen {
-  transform: scale(1.05) !important;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.25) !important;
+  /* 取消放大，避免被挤压到下一行 */
+  transform: none !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25) !important;
   z-index: 1000 !important;
   cursor: grabbing !important;
   transition: none !important;
@@ -130,7 +166,8 @@
 
 .drag {
   opacity: 0.9 !important;
-  transform: rotate(2deg) scale(1.03) !important;
+  /* 取消旋转与放大，保持网格稳定 */
+  transform: none !important;
   transition: none !important;
 }
 
@@ -167,6 +204,28 @@
 .widget-card {
   padding: 20px;
   text-align: center;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: move;
+  user-select: none;
+  transition: left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1),
+    top 0.3s cubic-bezier(0.4, 0.0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  z-index: 1;
+  position: relative;
+}
+
+/* 日历卡片特殊处理：移除padding，让内容铺满 */
+.widget-card.widget-calendar {
+  padding: 0;
 }
 
 /* 单格高度卡片的紧凑样式 */
@@ -204,12 +263,12 @@
 
 .widget-card:not(.chosen):not(.drag):hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .widget-card:not(.chosen):not(.drag):active {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .widget-icon {
@@ -278,15 +337,18 @@
 }
 
 /* 小部件通用样式（有渐变背景的） */
-.widget-card[style*="gradient"] {
+.widget-card[style*="gradient"],
+.widget-card[style*="linear-gradient"] {
   color: white;
 }
 
-.widget-card[style*="gradient"] .widget-icon {
+.widget-card[style*="gradient"] .widget-icon,
+.widget-card[style*="linear-gradient"] .widget-icon {
   color: white;
 }
 
-.widget-card[style*="gradient"] .widget-title {
+.widget-card[style*="gradient"] .widget-title,
+.widget-card[style*="linear-gradient"] .widget-title {
   color: white;
 }
 
@@ -379,6 +441,102 @@
   margin-top: 15px;
 }
 
+/* 时钟卡片特殊样式 */
+.widget-clock-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* 日历卡片特殊样式 - 铺满整个容器 */
+.widget-calendar .widget-calendar-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.widget-calendar-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.widget-calendar-image {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.widget-calendar-preview :deep(.calendar-card) {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.widget-calendar-preview :deep(.calendar-compact) {
+  border-radius: 16px;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.widget-clock-preview :deep(.clock-container) {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.widget-clock-preview :deep(.analog-clock-container) {
+  width: 100%;
+  height: 100%;
+  gap: 10px;
+  padding: 5px;
+}
+
+.widget-clock-preview :deep(.clock-face) {
+  flex-shrink: 0;
+}
+
+.widget-clock-preview :deep(.time-display-below) {
+  margin-top: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* AI助手卡片特殊样式 */
+.widget-ai {
+  position: relative;
+  overflow: hidden;
+}
+
+.widget-ai .widget-icon,
+.widget-ai .widget-title,
+.widget-ai .widget-preview {
+  display: none;
+}
+
 /* 模态框样式 */
 .modal-overlay {
   position: fixed;
@@ -399,6 +557,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -421,6 +580,7 @@
     transform: translateY(50px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -465,19 +625,27 @@
   margin: 0 auto;
 }
 
+/* 时钟模态框特殊样式 */
+.modal-content :deep(.clock-container.compact-mode) {
+  max-width: 100%;
+  padding: 20px;
+}
+
 /* 计算器模态框特殊样式 */
 .modal-content:has(.calculator) {
   max-width: 90vw !important;
   width: auto !important;
   min-width: 400px;
-  overflow: visible !important; /* 去除滚动条 */
+  overflow: visible !important;
+  /* 去除滚动条 */
 }
 
 .modal-content :deep(.calculator) {
   max-width: 500px !important;
   width: 100% !important;
   margin: 0 auto;
-  padding-right: 50px; /* 为关闭按钮预留空间 */
+  padding-right: 50px;
+  /* 为关闭按钮预留空间 */
 }
 
 .modal-content :deep(.calculator) .calculator {
@@ -507,7 +675,8 @@
   max-width: 700px;
   width: 100%;
   margin: 0 auto;
-  padding-right: 50px; /* 为关闭按钮预留空间 */
+  padding-right: 50px;
+  /* 为关闭按钮预留空间 */
 }
 
 .modal-content :deep(.calendar) .calendar-card {
@@ -564,6 +733,19 @@
   max-width: 100%;
 }
 
+/* AI助手模态框特殊样式 */
+.modal-content:has(.ai-assistant-container) {
+  max-width: 95vw;
+  width: 850px;
+  padding: 20px;
+  min-height: 650px;
+}
+
+.modal-content :deep(.ai-assistant-container) {
+  width: 100%;
+  height: 100%;
+}
+
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .grid-container {
@@ -575,26 +757,26 @@
   .main-content {
     padding: 15px;
   }
-  
+
   .greeting-section h1 {
     font-size: 2rem;
   }
-  
+
   .grid-container {
     grid-template-columns: repeat(5, 1fr);
     grid-template-rows: repeat(4, minmax(100px, 1fr));
     max-width: 100%;
     gap: 10px;
   }
-  
+
   .widget-icon {
     font-size: 2.5rem;
   }
-  
+
   .widget-title {
     font-size: 0.9rem;
   }
-  
+
   .modal-content {
     max-width: 95vw;
     max-height: 95vh;
@@ -606,47 +788,47 @@
   .greeting-section h1 {
     font-size: 1.5rem;
   }
-  
+
   .grid-container {
     grid-template-columns: repeat(2, 1fr);
     padding: 10px;
     gap: 8px;
   }
-  
+
   .widget-card {
     padding: 15px;
   }
-  
+
   .widget-icon {
     font-size: 2rem;
     margin-bottom: 8px;
   }
-  
+
   .widget-title {
     font-size: 0.8rem;
   }
-  
+
   .preview-time {
     font-size: 1.5rem !important;
   }
-  
+
   .preview-date {
     font-size: 1.5rem !important;
   }
-  
+
   .preview-temp {
     font-size: 1rem !important;
   }
-  
+
   .empty-item {
     display: none;
   }
-  
+
   .modal-content {
     padding: 10px;
     border-radius: 15px;
   }
-  
+
   .modal-close {
     width: 35px;
     height: 35px;

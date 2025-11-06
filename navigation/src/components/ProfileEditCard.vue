@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { supabase } from '../supabase.js'
 
@@ -13,11 +13,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:show'])
 
-const showProfileCard = computed({
-  get: () => props.show,
-  set: (value) => emit('update:show', value)
-})
-
 // 用户资料数据
 const profileData = ref({
   avatar: '',
@@ -26,6 +21,26 @@ const profileData = ref({
   email: '',
   password: '',
   bio: ''
+})
+
+// 检查是否有未保存的更改
+const hasUnsavedChanges = ref(false)
+
+// 监听编辑状态变化
+watch(() => [
+  profileData.value.nickname,
+  profileData.value.email,
+  profileData.value.password,
+  profileData.value.bio,
+  profileData.value.avatar
+], (newVal, oldVal) => {
+  // 如果有任何字段被修改，标记为有未保存的更改
+  hasUnsavedChanges.value = true
+}, { deep: true })
+
+const showProfileCard = computed({
+  get: () => props.show,
+  set: (value) => emit('update:show', value)
 })
 
 // 编辑状态
@@ -96,8 +111,37 @@ const loadUserProfile = async () => {
 }
 
 // 初始化用户资料
+// ESC键监听
+const handleKeydown = (event) => {
+  if (event.key === 'Escape' && showProfileCard.value) {
+    closeProfileCard()
+  }
+}
+
+// 优化关闭逻辑
+const closeProfileCard = () => {
+  if (hasUnsavedChanges.value) {
+    // 如果有未保存的更改，显示确认对话框
+    const confirmClose = confirm('您有未保存的更改，确定要关闭吗？')
+    if (!confirmClose) {
+      return // 用户取消关闭
+    }
+  }
+  
+  // 重置未保存更改标记
+  hasUnsavedChanges.value = false
+  showProfileCard.value = false
+}
+
 onMounted(() => {
   loadUserProfile()
+  // 添加键盘事件监听
+  window.addEventListener('keydown', handleKeydown)
+})
+
+// 组件卸载时移除事件监听
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 // 监听卡片显示状态，显示时重新加载数据
@@ -158,6 +202,12 @@ const saveProfile = async () => {
     
     showProfileCard.value = false
     
+    // 重置未保存更改标记
+    hasUnsavedChanges.value = false
+    
+    // 重置未保存更改标记
+    hasUnsavedChanges.value = false
+    
     // 显示成功消息
     alert('个人资料已保存成功！')
   } catch (error) {
@@ -169,11 +219,6 @@ const saveProfile = async () => {
       alert('保存失败: ' + error.message)
     }
   }
-}
-
-// 关闭卡片
-const closeProfileCard = () => {
-  showProfileCard.value = false
 }
 </script>
 

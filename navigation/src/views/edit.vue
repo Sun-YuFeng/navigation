@@ -62,8 +62,8 @@
           <h3>截图/教程图</h3>
           <div class="file-upload" @click="triggerFileInput" @dragover.prevent="handleDragOver" @dragleave="handleDragLeave" @drop="handleDrop">
             <p>点击或拖拽文件至此处上传（最多5张）</p>
-            <p>支持JPG、PNG、GIF格式，单张不超过5MB</p>
-            <input type="file" ref="fileInput" multiple accept="image/jpg,image/png,image/gif" style="display: none;" @change="handleFileSelect">
+            <p>支持JPG、PNG、GIF、WebP、BMP格式，单张不超过5MB</p>
+            <input type="file" ref="fileInput" multiple accept="image/jpg,image/png,image/jpeg,image/gif,image/webp,image/bmp" style="display: none;" @change="handleFileSelect">
           </div>
           <div v-if="uploadedFiles.length > 0" class="file-preview">
             <div v-for="(file, index) in uploadedFiles" :key="index" class="preview-item">
@@ -445,8 +445,8 @@ onMounted(() => {
     placeholder: '请输入详细内容...',
     theme: 'classic',
     icon: 'material',
-    type: 'wysiwyg',
-    mode: 'sv',
+    // 默认所见即所得模式
+    mode: 'wysiwyg',
     lang: 'zh_CN',
     toolbar: [
       'emoji',
@@ -519,19 +519,25 @@ onMounted(() => {
     },
     hint: {
       emoji: {
-        '😀': '😀 grinning',
-        '😃': '😃 smiley',
-        '😄': '😄 smile',
-        '😁': '😁 grin',
-        '😆': '😆 laughing',
-        '😅': '😅 sweat_smile',
-        '😂': '😂 joy',
-        '🤣': '🤣 rofl',
-        '😊': '😊 blush',
-        '😇': '😇 innocent'
+        '😀': '😀',
+        '😃': '😃',
+        '😄': '😄',
+        '😁': '😁',
+        '😆': '😆',
+        '😅': '😅',
+        '😂': '😂',
+        '🤣': '🤣',
+        '😊': '😊',
+        '😇': '😇'
       }
+    },
+    after: () => {
+      // 在 Vditor 初始化完成后，绑定到内部可编辑区域
+      bindEditorClipboardAndDnd()
     }
   })
+  // 兜底：延时再绑定一次，避免极端情况下未获取到内部元素
+  setTimeout(() => bindEditorClipboardAndDnd(), 300)
 })
 
 // 组件销毁时清理编辑器
@@ -540,6 +546,8 @@ onUnmounted(() => {
     vditor.destroy()
     vditor = null
   }
+  // 清理编辑区事件监听
+  unbindEditorClipboardAndDnd()
 })
 
 // 文件上传相关方法
@@ -567,7 +575,7 @@ const handleDrop = (event) => {
     const files = event.dataTransfer.files
     const imageFiles = Array.from(files).filter(file => 
       file.type.startsWith('image/') && 
-      ['image/jpeg', 'image/png', 'image/gif'].includes(file.type)
+      ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].includes(file.type)
     )
     
     if (imageFiles.length > 0) {
@@ -580,12 +588,93 @@ const handleDrop = (event) => {
   }
 }
 
+// 编辑区粘贴/拖拽图片（直达编辑器）
+let boundEditorEl = null
+
+const getVditorEditableEl = () => {
+  try {
+    if (!vditor || !vditor.vditor) return null
+    // wysiwyg 优先，其次 ir/sv
+    return (
+      (vditor.vditor.wysiwyg && vditor.vditor.wysiwyg.element) ||
+      (vditor.vditor.ir && vditor.vditor.ir.element) ||
+      (vditor.vditor.sv && vditor.vditor.sv.element) ||
+      null
+    )
+  } catch (e) {
+    return null
+  }
+}
+
+const bindEditorClipboardAndDnd = () => {
+  const el = getVditorEditableEl()
+  if (!el || el === boundEditorEl) return
+  unbindEditorClipboardAndDnd()
+  el.addEventListener('paste', editorPasteHandler)
+  el.addEventListener('drop', editorDropHandler)
+  el.addEventListener('dragover', editorDragOverHandler)
+  boundEditorEl = el
+}
+
+const unbindEditorClipboardAndDnd = () => {
+  if (!boundEditorEl) return
+  boundEditorEl.removeEventListener('paste', editorPasteHandler)
+  boundEditorEl.removeEventListener('drop', editorDropHandler)
+  boundEditorEl.removeEventListener('dragover', editorDragOverHandler)
+  boundEditorEl = null
+}
+
+const editorPasteHandler = (event) => {
+  const clipboard = event.clipboardData || window.clipboardData
+  if (!clipboard) return
+  const files = clipboard.files && clipboard.files.length ? clipboard.files : null
+  const items = clipboard.items || []
+  const imageFiles = []
+  if (files) {
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i]
+      if (f && f.type && f.type.startsWith('image/')) imageFiles.push(f)
+    }
+  } else {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item && item.type && item.type.startsWith('image/')) {
+        const file = item.getAsFile && item.getAsFile()
+        if (file) imageFiles.push(file)
+      }
+    }
+  }
+  if (imageFiles.length > 0) {
+    event.preventDefault()
+    insertImagesToEditor(imageFiles)
+  }
+}
+
+const editorDropHandler = (event) => {
+  event.preventDefault()
+  const dt = event.dataTransfer
+  if (!dt) return
+  const files = dt.files
+  if (!files || files.length === 0) return
+  const imageFiles = Array.from(files).filter(file => 
+    file.type && file.type.startsWith('image/') &&
+    ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].includes(file.type)
+  )
+  if (imageFiles.length > 0) {
+    insertImagesToEditor(imageFiles)
+  }
+}
+
+const editorDragOverHandler = (event) => {
+  event.preventDefault()
+}
+
 const handleFileSelect = (event) => {
   if (event.target.files.length) {
     const files = event.target.files
     const imageFiles = Array.from(files).filter(file => 
       file.type.startsWith('image/') && 
-      ['image/jpeg', 'image/png', 'image/gif'].includes(file.type)
+      ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].includes(file.type)
     )
     
     if (imageFiles.length > 0) {
@@ -607,7 +696,7 @@ const processFiles = (files) => {
       return
     }
     
-    if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].includes(file.type)) {
       alert(`文件 ${file.name} 格式不支持`)
       return
     }
@@ -1161,7 +1250,7 @@ const insertImagesToEditor = async (files) => {
       continue
     }
     
-    if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].includes(file.type)) {
       alert(`文件 ${file.name} 格式不支持`)
       continue
     }

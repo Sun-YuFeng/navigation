@@ -33,7 +33,7 @@ export function getCurrentUserId() {
 // 动态更新头信息的函数
 export function updateSupabaseHeaders() {
   const userId = getCurrentUserId()
-  
+
   // 更新REST客户端的头信息
   if (supabase.rest) {
     supabase.rest.headers['x-user-id'] = userId
@@ -43,14 +43,14 @@ export function updateSupabaseHeaders() {
 // 验证用户ID是否有效的函数
 export async function validateUserId(userId) {
   if (!userId) return false
-  
+
   try {
     const { data, error } = await supabase
       .from('users')
       .select('id')
       .eq('id', userId)
       .single()
-    
+
     return !error && data !== null
   } catch (error) {
     console.error('验证用户ID失败:', error)

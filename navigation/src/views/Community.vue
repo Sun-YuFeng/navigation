@@ -666,6 +666,8 @@ const handleIconError = (event, link) => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
+  line-clamp: 2;
 }
 
 .link-delete-btn {

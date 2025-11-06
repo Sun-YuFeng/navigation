@@ -18,7 +18,7 @@
             class="search-input" 
             placeholder="搜索工作流/智能体，教程，标签..."
             v-model="searchKeyword"
-            @input="handleSearch"
+            @input="onSearchInput"
           />
         </div>
       </div>
@@ -318,55 +318,74 @@
 
           <!-- 内容渲染区域 -->
           <div class="content-render-area" style="margin-top: 10px;">
-            <!-- 筛选结果统计 -->
-            <div class="filter-results-info" v-if="filteredData.length !== originalData.length">
-              筛选结果：{{ filteredData.length }} 条（共 {{ originalData.length }} 条）
+            <!-- 加载状态 -->
+            <div v-if="isLoading && isInitialLoad" class="loading-container">
+              <div class="loading-spinner"></div>
+              <p class="loading-text">正在加载数据...</p>
             </div>
             
-            <!-- 卡片视图 -->
-            <div v-if="currentView === 'card'" class="card-grid">
-              <WorkflowCard 
-                v-for="item in filteredData" 
-                :key="item.id"
-                :avatar="item.avatar"
-                :user-name="item.userName"
-                :publish-time="item.publishTime"
-                :tags="item.tags"
-                :title="item.title"
-                :image-url="item.imageUrl"
-                :description="item.description"
-                :likes="item.likes"
-                :favorites="item.favorites"
-                :comments="item.comments"
-                @like="(newLikes) => handleCardLike(item.id, newLikes)"
-                @favorite="(newFavorites) => handleCardFavorite(item.id, newFavorites)"
-                @comment="() => handleCardComment(item.id)"
-                @detail="() => handleCardDetail(item.id)"
-                @card-click="() => handleCardClick(item.id)"
-              />
-            </div>
+            <!-- 搜索状态提示 -->
+            <div v-else class="content-area-inner">
+              <div class="search-status-info" v-if="searchKeyword.trim()">
+                <div class="search-results-info" v-if="filteredData.length > 0">
+                  <i class="uil uil-search"></i>
+                  搜索 "{{ searchKeyword }}" 找到 {{ filteredData.length }} 条结果
+                </div>
+                <div class="search-no-results" v-else>
+                  <i class="uil uil-search-minus"></i>
+                  没有找到与 "{{ searchKeyword }}" 相关的内容
+                  <div class="search-suggestions">
+                    建议：尝试其他关键词或检查拼写
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 筛选结果统计 -->
+              <div class="filter-results-info" v-if="filteredData.length !== originalData.length && !searchKeyword.trim()">
+                筛选结果：{{ filteredData.length }} 条（共 {{ originalData.length }} 条）
+              </div>
+              
+              <!-- 卡片视图 -->
+              <div v-if="currentView === 'card'" class="card-grid">
+                <WorkflowCard 
+                  v-for="item in filteredData" 
+                  :key="item.id"
+                  :avatar="item.avatar"
+                  :user-name="item.userName"
+                  :publish-time="item.publishTime"
+                  :tags="item.tags"
+                  :title="item.title"
+                  :image-url="item.imageUrl"
+                  :description="item.description"
+                  :likes="item.likes"
+                  :favorites="item.favorites"
+                  :comments="item.comments"
+                  @comment="() => handleCardComment(item.id)"
+                  @detail="() => handleCardDetail(item.id)"
+                  @card-click="() => handleCardClick(item.id)"
+                />
+              </div>
 
-            <!-- 列表视图 -->
-            <div v-else class="list-container">
-              <CompactCard 
-                v-for="item in filteredData" 
-                :key="item.id"
-                :avatar="item.avatar"
-                :user-name="item.userName"
-                :publish-time="item.publishTime"
-                :tags="item.tags"
-                :title="item.title"
-                :image-url="item.imageUrl"
-                :description="item.description"
-                :likes="item.likes"
-                :favorites="item.favorites"
-                :comments="item.comments"
-                @like="(newLikes) => handleCardLike(item.id, newLikes)"
-                @favorite="(newFavorites) => handleCardFavorite(item.id, newFavorites)"
-                @comment="() => handleCardComment(item.id)"
-                @detail="() => handleCardDetail(item.id)"
-                @card-click="() => handleCardClick(item.id)"
-              />
+              <!-- 列表视图 -->
+              <div v-else class="list-container">
+                <CompactCard 
+                  v-for="item in filteredData" 
+                  :key="item.id"
+                  :avatar="item.avatar"
+                  :user-name="item.userName"
+                  :publish-time="item.publishTime"
+                  :tags="item.tags"
+                  :title="item.title"
+                  :image-url="item.imageUrl"
+                  :description="item.description"
+                  :likes="item.likes"
+                  :favorites="item.favorites"
+                  :comments="item.comments"
+                  @comment="() => handleCardComment(item.id)"
+                  @detail="() => handleCardDetail(item.id)"
+                  @card-click="() => handleCardClick(item.id)"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -374,39 +393,9 @@
         <!-- 右侧卡片容器 -->
         <div class="right-cards-container">
           <!-- 热门推荐卡片 -->
-          <div class="hot-recommend-card">
-            <div class="hot-recommend-header">
-              <i class="uil uil-fire"></i>
-              <h3>热门推荐</h3>
-            </div>
-            <div class="hot-item" @click="handleHotItemClick(1)">
-              <div class="hot-item-img">
-                <img src="https://picsum.photos/200/200?random=30" alt="热门内容">
-              </div>
-              <div class="hot-item-content">
-                <h4 class="hot-item-title">用ChatGPT+Zapier打造全自动内容发布流水线</h4>
-                <p class="hot-item-meta">1.2k 人使用</p>
-              </div>
-            </div>
-            <div class="hot-item" @click="handleHotItemClick(2)">
-              <div class="hot-item-img">
-                <img src="https://picsum.photos/200/200?random=31" alt="热门内容">
-              </div>
-              <div class="hot-item-content">
-                <h4 class="hot-item-title">n8n自动化处理邮件附件并保存到云盘</h4>
-                <p class="hot-item-meta">986 人使用</p>
-              </div>
-            </div>
-            <div class="hot-item" @click="handleHotItemClick(3)">
-              <div class="hot-item-img">
-                <img src="https://picsum.photos/200/200?random=32" alt="热门内容">
-              </div>
-              <div class="hot-item-content">
-                <h4 class="hot-item-title">智能体：自动分析竞品价格并生成报告</h4>
-                <p class="hot-item-meta">753 人使用</p>
-              </div>
-            </div>
-          </div>
+          <HotRecommendCard 
+            @item-click="handleHotItemClick"
+          />
 
           <!-- 最新发布卡片 -->
           <div class="latest-posts-card">
@@ -436,14 +425,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import WorkflowCard from '@/components/WorkflowCard.vue'
 import CompactCard from '@/components/CompactCard.vue'
 import HotTopicsCard from '@/components/HotTopicsCard.vue'
+import HotRecommendCard from '@/components/HotRecommendCard.vue'
 import { supabase } from '../supabase.js'
 
 const router = useRouter()
+
+// 加载状态
+const isLoading = ref(false)
+const isInitialLoad = ref(true)
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -459,15 +453,29 @@ const filters = reactive({
     tutorial: false
   },
   subTypes: [],
-  scenarios: ['电商运营'],
-  platforms: ['n8n'],
-  attributes: ['开源免费']
+  scenarios: [],
+  platforms: [],
+  attributes: []
 })
 
-// 处理搜索
-const handleSearch = () => {
+// 防抖函数
+const debounce = (fn, delay) => {
+  let timeoutId
+  return function (...args) {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn.apply(this, args), delay)
+  }
+}
+
+// 处理搜索（带防抖）
+const handleSearch = debounce(() => {
   console.log('搜索关键词:', searchKeyword.value)
-  filterData() // 自动应用筛选
+  // filterData 会在 computed 中自动处理
+}, 300)
+
+// 搜索输入处理
+const onSearchInput = () => {
+  handleSearch()
 }
 
 // 切换应用场景
@@ -478,7 +486,6 @@ const toggleScenario = (scenario) => {
   } else {
     filters.scenarios.push(scenario)
   }
-  filterData() // 自动应用筛选
 }
 
 // 切换来源平台
@@ -489,7 +496,6 @@ const togglePlatform = (platform) => {
   } else {
     filters.platforms.push(platform)
   }
-  filterData() // 自动应用筛选
 }
 
 // 切换内容子类型
@@ -500,7 +506,6 @@ const toggleSubType = (subType) => {
   } else {
     filters.subTypes.push(subType)
   }
-  filterData() // 自动应用筛选
 }
 
 // 切换属性
@@ -511,13 +516,11 @@ const toggleAttribute = (attribute) => {
   } else {
     filters.attributes.push(attribute)
   }
-  filterData() // 自动应用筛选
 }
 
 // 更新筛选条件
 const updateFilters = () => {
   console.log('筛选条件已更新:', filters)
-  filterData() // 自动应用筛选
 }
 
 // 重置筛选
@@ -528,93 +531,15 @@ const resetFilters = () => {
     tutorial: false
   }
   filters.subTypes = []
-  filters.scenarios = ['电商运营']
-  filters.platforms = ['n8n']
-  filters.attributes = ['开源免费']
+  filters.scenarios = []
+  filters.platforms = []
+  filters.attributes = []
   console.log('筛选条件已重置')
-  filterData() // 自动应用筛选
 }
 
 // 应用筛选
 const applyFilters = () => {
   console.log('应用筛选条件:', filters)
-  filterData()
-}
-
-// 筛选数据函数
-const filterData = () => {
-  if (originalData.value.length === 0) return
-  
-  let filtered = originalData.value
-  
-  // 平台筛选
-  if (filters.platforms.length > 0) {
-    filtered = filtered.filter(item => {
-      // 检查item的platforms字段中是否包含选中的平台
-      return filters.platforms.some(platform => 
-        item.platforms && item.platforms.includes(platform)
-      )
-    })
-  }
-  
-  // 应用场景筛选
-  if (filters.scenarios.length > 0) {
-    filtered = filtered.filter(item => {
-      // 检查item的tags中是否包含选中的场景
-      return filters.scenarios.some(scenario => 
-        item.tags && item.tags.includes(scenario)
-      )
-    })
-  }
-  
-  // 内容子类型筛选
-  if (filters.subTypes.length > 0) {
-    filtered = filtered.filter(item => {
-      // 检查item的tags中是否包含选中的子类型
-      return filters.subTypes.some(subType => 
-        item.tags && item.tags.includes(subType)
-      )
-    })
-  }
-  
-  // 属性筛选
-  if (filters.attributes.length > 0) {
-    filtered = filtered.filter(item => {
-      // 检查item的tags中是否包含选中的属性
-      return filters.attributes.some(attribute => 
-        item.tags && item.tags.includes(attribute)
-      )
-    })
-  }
-  
-  // 搜索关键词筛选
-  if (searchKeyword.value.trim()) {
-    const keyword = searchKeyword.value.toLowerCase().trim()
-    filtered = filtered.filter(item => {
-      return (
-        (item.title && item.title.toLowerCase().includes(keyword)) ||
-        (item.description && item.description.toLowerCase().includes(keyword)) ||
-        (item.tags && item.tags.some(tag => tag.toLowerCase().includes(keyword)))
-      )
-    })
-  }
-  
-  // 内容类型筛选（工作流/智能体/教程）
-  const activeContentTypes = getActiveContentTypesArray()
-  if (activeContentTypes.length > 0) {
-    filtered = filtered.filter(item => {
-      // 检查item的tags中是否包含选中的内容类型
-      return activeContentTypes.some(contentType => 
-        item.tags && item.tags.includes(contentType)
-      )
-    })
-  }
-  
-  // 根据当前选项卡排序
-  filtered = sortDataByTab(filtered)
-  
-  filteredData.value = filtered
-  console.log('筛选完成，结果数量:', filteredData.value.length)
 }
 
 // 获取激活的内容类型数组
@@ -649,14 +574,94 @@ const sortDataByTab = (data) => {
   return sortedData
 }
 
-// 获取激活的内容类型
-const getActiveContentTypes = () => {
-  const activeTypes = []
-  if (filters.contentTypes.workflow) activeTypes.push('工作流')
-  if (filters.contentTypes.agent) activeTypes.push('智能体')
-  if (filters.contentTypes.tutorial) activeTypes.push('教程/模板')
-  return activeTypes.join(', ') || '无'
-}
+// 使用 computed 优化筛选逻辑，避免重复计算
+const filteredData = computed(() => {
+  if (originalData.value.length === 0) return []
+  
+  let filtered = [...originalData.value]
+  const keyword = searchKeyword.value.toLowerCase().trim()
+  
+  // 平台筛选
+  if (filters.platforms.length > 0) {
+    filtered = filtered.filter(item => {
+      return filters.platforms.some(platform => 
+        item.platforms && item.platforms.includes(platform)
+      )
+    })
+  }
+  
+  // 应用场景筛选
+  if (filters.scenarios.length > 0) {
+    filtered = filtered.filter(item => {
+      return filters.scenarios.some(scenario => 
+        item.tags && item.tags.includes(scenario)
+      )
+    })
+  }
+  
+  // 内容子类型筛选
+  if (filters.subTypes.length > 0) {
+    filtered = filtered.filter(item => {
+      return filters.subTypes.some(subType => 
+        item.tags && item.tags.includes(subType)
+      )
+    })
+  }
+  
+  // 属性筛选
+  if (filters.attributes.length > 0) {
+    filtered = filtered.filter(item => {
+      return filters.attributes.some(attribute => 
+        item.tags && item.tags.includes(attribute)
+      )
+    })
+  }
+  
+  // 搜索关键词筛选
+  if (keyword) {
+    filtered = filtered.filter(item => {
+      const titleMatch = item.title && item.title.toLowerCase().includes(keyword)
+      const descriptionMatch = item.description && item.description.toLowerCase().includes(keyword)
+      const tagsMatch = item.tags && item.tags.some(tag => tag.toLowerCase().includes(keyword))
+      const platformsMatch = item.platforms && item.platforms.some(platform => 
+        platform.toLowerCase().includes(keyword)
+      )
+      const userNameMatch = item.userName && item.userName.toLowerCase().includes(keyword)
+      
+      return titleMatch || descriptionMatch || tagsMatch || platformsMatch || userNameMatch
+    })
+    
+    // 对搜索结果进行排序：标题匹配优先，然后是描述匹配
+    filtered.sort((a, b) => {
+      const aTitleMatch = a.title && a.title.toLowerCase().includes(keyword)
+      const bTitleMatch = b.title && b.title.toLowerCase().includes(keyword)
+      
+      if (aTitleMatch && !bTitleMatch) return -1
+      if (!aTitleMatch && bTitleMatch) return 1
+      
+      const aDescriptionMatch = a.description && a.description.toLowerCase().includes(keyword)
+      const bDescriptionMatch = b.description && b.description.toLowerCase().includes(keyword)
+      
+      if (aDescriptionMatch && !bDescriptionMatch) return -1
+      if (!aDescriptionMatch && bDescriptionMatch) return 1
+      
+      return 0
+    })
+  }
+  
+  // 内容类型筛选（工作流/智能体/教程）
+  const activeContentTypes = getActiveContentTypesArray()
+  if (activeContentTypes.length > 0) {
+    filtered = filtered.filter(item => {
+      return activeContentTypes.some(contentType => 
+        item.tags && item.tags.includes(contentType)
+      )
+    })
+  }
+  
+  // 根据当前选项卡排序
+  return sortDataByTab(filtered)
+})
 
 // 视图切换功能
 const currentView = ref('card') // 默认卡片视图
@@ -664,7 +669,6 @@ const currentView = ref('card') // 默认卡片视图
 const switchView = (viewType) => {
   currentView.value = viewType
   console.log('切换到视图:', viewType)
-  // 这里可以添加视图切换逻辑
 }
 
 // 选项卡功能
@@ -673,15 +677,15 @@ const currentTab = ref('all') // 默认全部内容
 const switchTab = (tabType) => {
   currentTab.value = tabType
   console.log('切换到选项卡:', tabType)
-  filterData() // 自动应用筛选
 }
 
-// 从数据库获取文章数据
+// 从数据库获取文章数据（优化版）
 const loadArticlesFromDatabase = async () => {
   try {
+    isLoading.value = true
     console.log('开始从数据库获取文章数据...')
     
-    // 查询文章数据，同时关联查询用户信息
+    // 优化查询：只查询需要的字段，减少数据传输
     const { data: articles, error } = await supabase
       .from('articles')
       .select(`
@@ -710,14 +714,14 @@ const loadArticlesFromDatabase = async () => {
       return []
     }
     
-    console.log('成功获取文章数据:', articles)
+    console.log('成功获取文章数据:', articles?.length || 0, '条')
     
-    // 将数据库文章转换为前端需要的格式
+    // 直接处理数据，对于20条数据来说同步处理足够快
     const formattedArticles = articles.map(article => {
       // 解析tags字段
       let tags = []
       try {
-        const tagData = JSON.parse(article.tags || '{}')
+        const tagData = typeof article.tags === 'string' ? JSON.parse(article.tags || '{}') : (article.tags || {})
         if (tagData.content_type) tags.push(tagData.content_type)
         if (tagData.scenes && Array.isArray(tagData.scenes)) {
           tags = tags.concat(tagData.scenes.slice(0, 2))
@@ -738,7 +742,6 @@ const loadArticlesFromDatabase = async () => {
       let platforms = []
       try {
         if (article.platforms) {
-          // 数据库中的platforms字段已经是数组格式，不需要JSON.parse
           platforms = Array.isArray(article.platforms) ? article.platforms : []
         }
       } catch (e) {
@@ -754,16 +757,13 @@ const loadArticlesFromDatabase = async () => {
       const finalTags = [...new Set([...tags, ...platforms])].slice(0, 3)
       
       // 获取封面图片URL
-      let coverImageUrl = '/src/assets/default.jpg' // 默认使用本地assets下的default.jpg
+      let coverImageUrl = '/src/assets/default.jpg'
       
-      // 如果文章有封面图片URL，直接使用
       if (article.cover_image) {
         try {
-          // 检查是否是完整的URL（包含http或https）
           if (article.cover_image.startsWith('http://') || article.cover_image.startsWith('https://')) {
             coverImageUrl = article.cover_image
           } else {
-            // 如果不是完整URL，尝试从Supabase Storage获取
             const { data: { publicUrl } } = supabase.storage
               .from('images')
               .getPublicUrl(article.cover_image)
@@ -788,13 +788,13 @@ const loadArticlesFromDatabase = async () => {
         userName: userName,
         publishTime: formatTimeAgo(article.created_at),
         tags: finalTags,
-        platforms: platforms, // 添加platforms字段
+        platforms: platforms,
         title: article.article_title || '无标题',
         imageUrl: coverImageUrl,
         description: article.description || '暂无描述',
         likes: article.like_count || 0,
         favorites: article.favorite_count || 0,
-        comments: Math.floor(Math.random() * 50) // 评论数随机生成
+        comments: Math.floor(Math.random() * 50)
       }
     })
     
@@ -802,6 +802,8 @@ const loadArticlesFromDatabase = async () => {
   } catch (error) {
     console.error('加载文章数据时发生错误:', error)
     return []
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -913,41 +915,35 @@ const mockWorkflowData = [
 const workflowData = ref([])
 // 原始数据备份，用于筛选
 const originalData = ref([])
-// 筛选后的数据
-const filteredData = ref([])
 
-// 组件挂载时加载数据
+// 组件挂载时加载数据（优化版：不阻塞初始渲染）
 onMounted(async () => {
   console.log('market.vue 组件挂载，开始加载数据...')
   
-  // 从数据库获取文章数据
-  const databaseArticles = await loadArticlesFromDatabase()
-  console.log('数据库文章数量:', databaseArticles.length)
+  // 先显示假数据，让用户看到内容
+  originalData.value = [...mockWorkflowData]
+  workflowData.value = [...mockWorkflowData]
   
-  // 合并数据：数据库文章在前，假数据在后
-  const allData = [...databaseArticles, ...mockWorkflowData]
-  workflowData.value = allData
-  originalData.value = allData
-  filteredData.value = allData
-  console.log('合并后的文章总数:', allData.length)
+  // 使用 nextTick 确保初始渲染完成后再加载数据库数据
+  await nextTick()
+  
+  // 异步加载数据库数据，不阻塞UI
+  loadArticlesFromDatabase().then(databaseArticles => {
+    console.log('数据库文章数量:', databaseArticles.length)
+    
+    // 合并数据：数据库文章在前，假数据在后
+    const allData = [...databaseArticles, ...mockWorkflowData]
+    workflowData.value = allData
+    originalData.value = allData
+    isInitialLoad.value = false
+    console.log('合并后的文章总数:', allData.length)
+  }).catch(error => {
+    console.error('加载数据库数据失败:', error)
+    isInitialLoad.value = false
+  })
 })
 
-// 组件事件处理
-const handleCardLike = (cardId, newLikes) => {
-  const card = workflowData.value.find(item => item.id === cardId)
-  if (card) {
-    card.likes = newLikes
-    console.log(`卡片 ${cardId} 点赞数更新为: ${newLikes}`)
-  }
-}
 
-const handleCardFavorite = (cardId, newFavorites) => {
-  const card = workflowData.value.find(item => item.id === cardId)
-  if (card) {
-    card.favorites = newFavorites
-    console.log(`卡片 ${cardId} 收藏数更新为: ${newFavorites}`)
-  }
-}
 
 const handleCardComment = (cardId) => {
   console.log(`打开卡片 ${cardId} 的评论`)
@@ -958,15 +954,51 @@ const handleCardDetail = (cardId) => {
 }
 
 // 处理卡片点击事件 - 跳转到详情页
-const handleCardClick = (cardId) => {
+const handleCardClick = async (cardId) => {
   console.log(`点击卡片 ${cardId}，跳转到详情页`)
-  router.push('/detail')
+  
+  try {
+    // 先调用数据库函数增加浏览量
+    const { error } = await supabase.rpc('increment_article_view_count', {
+      article_uuid: cardId
+    })
+    
+    if (error) {
+      console.error('增加浏览量失败:', error)
+      // 即使增加浏览量失败，也继续跳转
+    } else {
+      console.log(`文章 ${cardId} 浏览量已增加`)
+    }
+  } catch (err) {
+    console.error('调用增加浏览量函数时出错:', err)
+  }
+  
+  // 跳转到详情页，传递文章ID
+  router.push(`/detail/${cardId}`)
 }
 
 // 处理热门推荐项点击
-const handleHotItemClick = (itemId) => {
-  console.log(`点击热门推荐项 ${itemId}`)
-  // 这里可以添加跳转到对应内容的逻辑
+const handleHotItemClick = async (itemId) => {
+  console.log(`点击热门推荐项 ${itemId}，跳转到详情页`)
+  
+  try {
+    // 先调用数据库函数增加浏览量
+    const { error } = await supabase.rpc('increment_article_view_count', {
+      article_uuid: itemId
+    })
+    
+    if (error) {
+      console.error('增加浏览量失败:', error)
+      // 即使增加浏览量失败，也继续跳转
+    } else {
+      console.log(`文章 ${itemId} 浏览量已增加`)
+    }
+  } catch (err) {
+    console.error('调用增加浏览量函数时出错:', err)
+  }
+  
+  // 跳转到详情页，传递文章ID
+  router.push(`/detail/${itemId}`)
 }
 
 // 处理最新动态项点击
@@ -976,10 +1008,26 @@ const handleNewsItemClick = (itemId) => {
 }
 
 // 处理帖子点击
-const handlePostClick = (postId) => {
+const handlePostClick = async (postId) => {
   console.log(`点击帖子 ${postId}`)
-  // 这里可以添加跳转到对应帖子的逻辑
-  // 例如：router.push(`/post/${postId}`)
+  
+  try {
+    // 先调用数据库函数增加浏览量
+    const { error } = await supabase.rpc('increment_article_view_count', {
+      article_uuid: postId
+    })
+    
+    if (error) {
+      console.error('增加浏览量失败:', error)
+    } else {
+      console.log(`文章 ${postId} 浏览量已增加`)
+    }
+  } catch (err) {
+    console.error('调用增加浏览量函数时出错:', err)
+  }
+  
+  // 跳转到详情页
+  router.push(`/detail/${postId}`)
 }
 
 // 处理热门话题点击

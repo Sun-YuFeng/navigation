@@ -23,7 +23,7 @@
   background: #fff;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   height: fit-content;
 }
 
@@ -51,9 +51,11 @@
   background: #fff;
   border-radius: 8px;
   padding: 30px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  /* 防止因内部宽内容撑破导致布局变形 */
 }
 
 /* 教程卡片样式 */
@@ -147,21 +149,25 @@ label {
   font-size: 14px;
 }
 
-.radio-group, .checkbox-group {
+.radio-group,
+.checkbox-group {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 8px;
 }
 
-.radio-group label, .checkbox-group label {
+.radio-group label,
+.checkbox-group label {
   font-weight: 400;
   color: #444;
   cursor: pointer;
   font-size: 13px;
 }
 
-input[type="text"], textarea, select {
+input[type="text"],
+textarea,
+select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid #ddd;
@@ -170,10 +176,12 @@ input[type="text"], textarea, select {
   transition: border 0.3s;
 }
 
-input[type="text"]:focus, textarea:focus, select:focus {
+input[type="text"]:focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
 .file-upload {
@@ -188,7 +196,7 @@ input[type="text"]:focus, textarea:focus, select:focus {
 
 .file-upload:hover {
   border-color: #007bff;
-  background-color: rgba(0,123,255,0.02);
+  background-color: rgba(0, 123, 255, 0.02);
 }
 
 .file-upload p {
@@ -315,10 +323,44 @@ button.draft:hover {
 
 #vditor .vditor-content {
   border: none;
+  overflow: auto;
+  /* 内容超出时内部滚动，避免整体变形 */
 }
 
 #vditor .vditor-resize {
   display: none;
+}
+
+/* 隐藏 Vditor 代码块复制按钮与相关容器，防止复制后展示文本 */
+.vditor-copy,
+.vditor-code__copy,
+.vditor-code__bar .vditor-copy {
+  display: none !important;
+}
+
+/* 所见即所得内容自适应，避免撑破布局 */
+.vditor-wysiwyg {
+  word-break: break-word;
+}
+
+.vditor-wysiwyg .vditor-reset img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+}
+
+.vditor-wysiwyg .vditor-reset table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.vditor-wysiwyg pre,
+.vditor-wysiwyg code,
+.vditor-wysiwyg pre code {
+  white-space: pre;
+  overflow: auto;
 }
 
 /* 适配小屏幕 */
@@ -326,11 +368,11 @@ button.draft:hover {
   .container {
     flex-direction: column;
   }
-  
+
   .config-panel {
     width: 100%;
   }
-  
+
   #editor {
     min-height: 400px;
   }
@@ -365,6 +407,7 @@ button.draft:hover {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -691,11 +734,11 @@ button.draft:hover {
   .platform-grid {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
-  
+
   .scene-tags {
     grid-template-columns: 1fr 1fr;
   }
-  
+
   .attribute-sections {
     grid-template-columns: 1fr 1fr;
   }
@@ -717,6 +760,12 @@ button.draft:hover {
 
 .hint-icon {
   font-size: 14px;
+  display: inline-block;
+  position: relative;
+}
+
+.hint-icon:hover {
+  transform: scale(1.1);
 }
 
 .platform-item {

@@ -35,13 +35,13 @@
         <!-- 互动区域 -->
         <div class="card-interact">
           <div class="interact-stats">
-            <span class="like" :class="{ active: isLiked }" @click="handleLike">
+            <span class="like">
               <i class="uil uil-thumbs-up"></i>
-              <span>{{ isLiked ? likes + 1 : likes }}</span>
+              <span>{{ likes }}</span>
             </span>
-            <span class="star" :class="{ active: isFavorited }" @click="handleFavorite">
+            <span class="star">
               <i class="uil uil-star"></i>
-              <span>{{ isFavorited ? favorites + 1 : favorites }}</span>
+              <span>{{ favorites }}</span>
             </span>
             <span class="comment" @click="handleComment">
               <i class="uil uil-comment-alt"></i>
@@ -108,29 +108,10 @@ const props = defineProps({
 })
 
 // 定义组件事件
-const emit = defineEmits(['like', 'favorite', 'comment', 'detail', 'cardClick'])
-
-// 图标状态管理
-const isLiked = ref(false)
-const isFavorited = ref(false)
+const emit = defineEmits(['comment', 'detail', 'cardClick'])
 
 // 鼠标悬停状态
 const isHovered = ref(false)
-
-// 事件处理函数
-const handleLike = (e) => {
-  e.stopPropagation() // 阻止事件冒泡
-  isLiked.value = !isLiked.value
-  const newLikes = isLiked.value ? props.likes + 1 : props.likes - 1
-  emit('like', newLikes)
-}
-
-const handleFavorite = (e) => {
-  e.stopPropagation() // 阻止事件冒泡
-  isFavorited.value = !isFavorited.value
-  const newFavorites = isFavorited.value ? props.favorites + 1 : props.favorites - 1
-  emit('favorite', newFavorites)
-}
 
 const handleComment = (e) => {
   e.stopPropagation() // 阻止事件冒泡

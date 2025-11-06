@@ -55,10 +55,11 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/detail',
+      path: '/detail/:id?',
       name: 'detail',
       component: DetailView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
+      props: true
     },
     {
       path: '/person-center',

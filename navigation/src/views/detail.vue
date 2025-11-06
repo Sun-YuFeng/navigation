@@ -70,7 +70,7 @@
         
           <!-- 作者信息 -->
           <div class="author-info">
-            <div class="author-details">
+            <div class="author-details" @click="navigateToAuthorProfile">
               <img :src="article?.author?.avatar || 'https://picsum.photos/id/237/60/60'" alt="作者头像" class="author-avatar">
               <div>
                 <div class="flex items-center">
@@ -306,6 +306,7 @@
         <!-- 作者卡片 -->
         <AuthorCard 
           :author-info="authorInfo"
+          :author-id="authorId"
           @follow="handleAuthorFollow"
           @private-message="handleAuthorPrivateMessage"
         />
@@ -387,6 +388,8 @@ const error = ref(null)
 
 // 作者信息数据
 const authorInfo = ref(null)
+const authorId = ref('')
+
 
 // 作者精选文章数据
 const selectedWorks = ref([])
@@ -671,8 +674,13 @@ const fetchAuthorInfo = async (userId) => {
         favoriteCount: 4286,
         followerCount: 667
       }
+      // 设置作者ID
+      authorId.value = ''
       return
     }
+    
+    // 设置作者ID
+    authorId.value = userId
     
     // 从数据库获取用户详细信息 - 修正字段名
     const { data: userProfile, error: profileError } = await supabase
@@ -995,13 +1003,25 @@ const handleSelectedWorkClick = async (articleId) => {
 
 // 处理查看更多
 const handleViewMore = () => {
-  if (authorInfo.value && authorInfo.value.name) {
-    // 这里可以跳转到作者主页或文章列表页
-    console.log('查看作者更多文章:', authorInfo.value.name)
-    // 暂时显示提示
-    alert(`即将跳转到作者 ${authorInfo.value.name} 的主页`)
+  if (!authorInfo.value || !authorInfo.value.name) {
+    alert('作者信息未加载完成')
+    return
+  }
+  
+  const currentUserId = getCurrentUserId()
+  const currentAuthorId = authorId.value
+  
+  // 判断是否是当前用户查看自己的主页
+  const isCurrentUser = currentUserId && currentAuthorId && currentUserId === currentAuthorId
+  
+  if (isCurrentUser) {
+    // 跳转到自己的个人中心（使用当前用户ID）
+    router.push(`/person-center/${currentUserId}`)
+    console.log('跳转到个人中心页面（当前用户）')
   } else {
-    alert('即将跳转到作者主页')
+    // 跳转到作者的个人中心页面（传递作者ID）
+    router.push(`/person-center/${currentAuthorId}`)
+    console.log('跳转到作者个人中心页面:', authorInfo.value.name)
   }
 }
 
@@ -1020,6 +1040,15 @@ const incrementViewCount = async (articleId) => {
     }
   } catch (err) {
     console.error('调用增加浏览量函数时出错:', err)
+  }
+}
+
+// 跳转到作者个人中心
+const navigateToAuthorProfile = () => {
+  if (authorId.value) {
+    router.push(`/person-center/${authorId.value}`)
+  } else {
+    console.warn('无法跳转到作者个人中心：作者ID为空')
   }
 }
 
@@ -1924,6 +1953,20 @@ const handleSortChange = (event) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: all 0.2s ease;
+}
+
+.author-details:hover {
+  background-color: #f5f5f5;
+  transform: translateY(-1px);
+}
+
+.author-details:active {
+  background-color: #e9ecef;
+  transform: translateY(0);
 }
 
 .author-avatar {

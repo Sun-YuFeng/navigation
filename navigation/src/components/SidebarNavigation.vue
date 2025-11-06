@@ -184,7 +184,11 @@ onMounted(() => {
 
 // 打开个人中心页面
 const openPersonaCenter = () => {
-  router.push('/person-center')
+  if (authStore.user?.id) {
+    router.push(`/person-center/${authStore.user.id}`)
+  } else {
+    router.push('/person-center')
+  }
 }
 
 // 打开设置页面

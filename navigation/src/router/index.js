@@ -62,10 +62,11 @@ const router = createRouter({
       props: true
     },
     {
-      path: '/person-center',
+      path: '/person-center/:userId?',
       name: 'person-center',
       component: PersonCenterView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
+      props: true
     },
   ],
 })

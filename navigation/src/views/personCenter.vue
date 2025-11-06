@@ -26,7 +26,7 @@
     <div class="main-content">
       <!-- AuthorCard组件 - 固定在左侧 -->
       <div class="author-card-container">
-        <AuthorCard :author-info="authorInfo" @follow="handleFollow" @private-message="handlePrivateMessage" />
+        <AuthorCard :author-info="authorInfo" :author-id="currentUserId" @follow="handleFollow" @private-message="handlePrivateMessage" />
       </div>
       
       <!-- 根据当前选中的导航项显示不同内容 -->
@@ -113,15 +113,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { supabase } from '../supabase.js'
 import CompactCard from '../components/CompactCard.vue'
 import AuthorCard from '../components/AuthorCard.vue'
 
+// 接收路由参数
+const props = defineProps({
+  userId: {
+    type: String,
+    default: ''
+  }
+})
+
 const authStore = useAuthStore()
 const router = useRouter()
+
+// 当前显示的用户ID（根据参数或当前登录用户）
+const currentUserId = computed(() => {
+  return props.userId || authStore.user?.id || ''
+})
+
+// 判断当前页面是否是查看自己的个人中心
+const isViewingOwnProfile = computed(() => {
+  if (!props.userId && authStore.user?.id) {
+    return true // 没有指定userId，查看当前登录用户
+  }
+  return props.userId === authStore.user?.id
+})
 
 // 用户信息
 const userAvatar = ref('/src/assets/default-avatar.png')
@@ -166,16 +187,18 @@ const collectedPosts = ref([])
 // 加载用户文章数据
 const loadUserArticles = async () => {
   try {
-    if (!authStore.user?.id) {
-      console.log('用户未登录')
+    const targetUserId = currentUserId.value
+    
+    if (!targetUserId) {
+      console.log('没有用户ID，无法加载文章')
       return
     }
 
-    // 查询当前用户的所有文章，按创建时间倒序排列（用于最近动态）
+    // 查询目标用户的所有文章，按创建时间倒序排列（用于最近动态）
     const { data: articles, error } = await supabase
       .from('articles')
       .select('*')
-      .eq('user_id', authStore.user.id)
+      .eq('user_id', targetUserId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -187,7 +210,7 @@ const loadUserArticles = async () => {
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profiles')
       .select('display_name, avatar_url')
-      .eq('id', authStore.user.id)
+      .eq('id', targetUserId)
       .single()
 
     if (profileError) {
@@ -219,7 +242,7 @@ const loadUserArticles = async () => {
       return {
         id: article.id,
         avatar: userProfile?.avatar_url || '/src/assets/default-avatar.png',
-        userName: userProfile?.display_name || authStore.user.email || '匿名用户',
+        userName: userProfile?.display_name || '匿名用户',
         publishTime: formatTimeAgo(article.created_at),
         imageUrl: article.cover_image || 'https://picsum.photos/id/0/600/400',
         title: article.article_title,
@@ -249,12 +272,14 @@ const loadUserArticles = async () => {
 // 加载用户收藏的帖子
 const loadUserFavorites = async () => {
   try {
-    if (!authStore.user?.id) {
-      console.log('用户未登录')
+    const targetUserId = currentUserId.value
+    
+    if (!targetUserId) {
+      console.log('没有目标用户ID，无法加载收藏')
       return
     }
 
-    // 查询用户收藏的帖子
+    // 查询目标用户收藏的帖子
     const { data: favorites, error } = await supabase
       .from('user_favorites')
       .select(`
@@ -278,7 +303,7 @@ const loadUserFavorites = async () => {
           )
         )
       `)
-      .eq('user_id', authStore.user.id)
+      .eq('user_id', targetUserId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -394,46 +419,49 @@ const handleFollow = (author) => {
 // 从数据库获取用户资料
 const fetchUserProfile = async () => {
   try {
-    if (authStore.user) {
-      // 查询用户资料表 - 使用id字段而不是user_id
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', authStore.user.id)
-        .single()
+    const targetUserId = currentUserId.value
+    
+    if (!targetUserId) {
+      console.log('没有用户ID，使用默认数据')
+      setDefaultUserData()
+      return
+    }
+    
+    // 查询用户资料表
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', targetUserId)
+      .single()
+    
+    if (error) {
+      console.error('获取用户资料失败:', error)
+      // 使用默认数据
+      setDefaultUserData()
+      return
+    }
+    
+    if (data) {
+      // 更新用户信息
+      userNickname.value = data.display_name || '用户'
+      userAvatar.value = data.avatar_url || '/src/assets/default-avatar.png'
       
-      if (error) {
-        console.error('获取用户资料失败:', error)
-        // 使用默认数据
-        setDefaultUserData()
-        return
+      // 更新AuthorCard数据
+      authorInfo.value = {
+        name: data.display_name || '用户',
+        avatar: data.avatar_url || '/src/assets/default-avatar.png',
+        bio: data.bio || '热爱生活，热爱编程！专注于前端开发和自动化工具',
+        articleCount: 0, // 这些字段在表中不存在，使用默认值
+        likeCount: 0,
+        favoriteCount: 0,
+        followerCount: 0
       }
       
-      if (data) {
-        // 更新用户信息
-        userNickname.value = data.display_name || '用户'
-        userAvatar.value = data.avatar_url || '/src/assets/default-avatar.png'
-        
-        // 更新AuthorCard数据
-        authorInfo.value = {
-          name: data.display_name || '用户',
-          avatar: data.avatar_url || '/src/assets/default-avatar.png',
-          bio: data.bio || '热爱生活，热爱编程！专注于前端开发和自动化工具',
-          articleCount: 0, // 这些字段在表中不存在，使用默认值
-          likeCount: 0,
-          favoriteCount: 0,
-          followerCount: 0
-        }
-        
-        // 更新用户资料
-        userProfile.value.nickname = data.display_name || '用户'
-        userProfile.value.signature = data.bio || '热爱生活，热爱编程！'
-      } else {
-        // 如果没有用户资料记录，使用默认数据
-        setDefaultUserData()
-      }
+      // 更新用户资料
+      userProfile.value.nickname = data.display_name || '用户'
+      userProfile.value.signature = data.bio || '热爱生活，热爱编程！'
     } else {
-      // 如果没有用户信息，使用默认值
+      // 如果没有用户资料记录，使用默认数据
       setDefaultUserData()
     }
   } catch (error) {
@@ -461,6 +489,20 @@ const setDefaultUserData = () => {
 onMounted(async () => {
   await fetchUserProfile()
   await loadUserArticles()
+})
+
+// 监听用户ID变化，重新加载数据
+watch(currentUserId, async (newUserId, oldUserId) => {
+  if (newUserId && newUserId !== oldUserId) {
+    console.log('用户ID发生变化，重新加载数据:', newUserId)
+    await fetchUserProfile()
+    await loadUserArticles()
+    
+    // 如果当前正在查看收藏页，重新加载收藏数据
+    if (currentNav.value === 'collect') {
+      await loadUserFavorites()
+    }
+  }
 })
 </script>
 

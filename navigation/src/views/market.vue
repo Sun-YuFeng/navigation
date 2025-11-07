@@ -404,12 +404,17 @@
               <h3>最新发布</h3>
             </div>
             <div class="post-links">
-              <a href="#" class="post-link" @click="handlePostClick(1)">用n8n自动同步Notion数据到Excel的工作流</a>
-              <a href="#" class="post-link" @click="handlePostClick(2)">Zapier自动化社交媒体内容发布</a>
-              <a href="#" class="post-link" @click="handlePostClick(3)">Make自动化数据清洗和报表生成</a>
-              <a href="#" class="post-link" @click="handlePostClick(4)">扣子平台自动化代码部署流程</a>
-              <a href="#" class="post-link" @click="handlePostClick(5)">智谱清言智能客服机器人配置</a>
-              <a href="#" class="post-link" @click="handlePostClick(6)">n8n自动化邮件营销系统</a>
+              <a 
+                v-for="post in latestPosts" 
+                :key="post.id"
+                href="#" 
+                class="post-link" 
+                @click="handlePostClick(post.id)"
+              >{{ post.title }}</a>
+              <!-- 如果没有数据，显示提示信息 -->
+              <div v-if="latestPosts.length === 0" class="no-posts">
+                暂无最新发布内容
+              </div>
             </div>
           </div>
 
@@ -679,13 +684,13 @@ const switchTab = (tabType) => {
   console.log('切换到选项卡:', tabType)
 }
 
-// 从数据库获取文章数据（优化版）
+// 从数据库获取文章数据（优化版）- 包含评论数量
 const loadArticlesFromDatabase = async () => {
   try {
     isLoading.value = true
     console.log('开始从数据库获取文章数据...')
     
-    // 优化查询：只查询需要的字段，减少数据传输
+    // 优化查询：包含评论数量统计
     const { data: articles, error } = await supabase
       .from('articles')
       .select(`
@@ -704,7 +709,8 @@ const loadArticlesFromDatabase = async () => {
             display_name,
             avatar_url
           )
-        )
+        ),
+        comment_details (id)
       `)
       .order('created_at', { ascending: false })
       .limit(20)
@@ -794,7 +800,7 @@ const loadArticlesFromDatabase = async () => {
         description: article.description || '暂无描述',
         likes: article.like_count || 0,
         favorites: article.favorite_count || 0,
-        comments: Math.floor(Math.random() * 50)
+        comments: article.comment_details?.length || 0
       }
     })
     
@@ -941,6 +947,9 @@ onMounted(async () => {
     console.error('加载数据库数据失败:', error)
     isInitialLoad.value = false
   })
+  
+  // 加载最新发布的数据
+  loadLatestPosts()
 })
 
 
@@ -1007,28 +1016,66 @@ const handleNewsItemClick = (itemId) => {
   // 这里可以添加跳转到对应动态的逻辑
 }
 
-// 处理帖子点击
-const handlePostClick = async (postId) => {
-  console.log(`点击帖子 ${postId}`)
+  // 获取最新发布的文章数据
+  const latestPosts = ref([])
   
-  try {
-    // 先调用数据库函数增加浏览量
-    const { error } = await supabase.rpc('increment_article_view_count', {
-      article_uuid: postId
-    })
-    
-    if (error) {
-      console.error('增加浏览量失败:', error)
-    } else {
-      console.log(`文章 ${postId} 浏览量已增加`)
+  // 加载最新发布的数据
+  const loadLatestPosts = async () => {
+    try {
+      console.log('开始加载最新发布数据...')
+      
+      // 查询最新发布的6篇文章
+      const { data: articles, error } = await supabase
+        .from('articles')
+        .select(`
+          id,
+          article_title,
+          created_at
+        `)
+        .order('created_at', { ascending: false })
+        .limit(6)
+      
+      if (error) {
+        console.error('获取最新发布数据失败:', error)
+        return
+      }
+      
+      console.log('成功获取最新发布数据:', articles?.length || 0, '条')
+      
+      // 格式化数据
+      latestPosts.value = articles.map(article => ({
+        id: article.id,
+        title: article.article_title || '无标题',
+        createdAt: article.created_at
+      }))
+      
+    } catch (error) {
+      console.error('加载最新发布数据时发生错误:', error)
     }
-  } catch (err) {
-    console.error('调用增加浏览量函数时出错:', err)
   }
-  
-  // 跳转到详情页
-  router.push(`/detail/${postId}`)
-}
+
+  // 处理帖子点击
+  const handlePostClick = async (postId) => {
+    console.log(`点击帖子 ${postId}`)
+    
+    try {
+      // 先调用数据库函数增加浏览量
+      const { error } = await supabase.rpc('increment_article_view_count', {
+        article_uuid: postId
+      })
+      
+      if (error) {
+        console.error('增加浏览量失败:', error)
+      } else {
+        console.log(`文章 ${postId} 浏览量已增加`)
+      }
+    } catch (err) {
+      console.error('调用增加浏览量函数时出错:', err)
+    }
+    
+    // 跳转到详情页
+    router.push(`/detail/${postId}`)
+  }
 
 // 处理热门话题点击
 const handleTopicClick = (topicId) => {

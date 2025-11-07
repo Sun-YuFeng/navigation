@@ -1,5 +1,5 @@
 <template>
-  <div class="classify-container">
+  <div class="classify-container" :style="wallpaperUrl ? { backgroundImage: `url(${wallpaperUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}">
     <!-- 主内容区域 -->
     <div class="main-content">
       <!-- 顶部标题区域 -->
@@ -192,7 +192,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { getCategoryByName } from '../utils/categoryData'
@@ -202,6 +202,9 @@ import { useAuthStore } from '../stores/auth'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+// 壁纸相关
+const wallpaperUrl = ref(null)
 
 // ========== 性能优化：数据缓存 ==========
 // 缓存分类名称，避免重复查询
@@ -929,10 +932,37 @@ watch(() => route.params.categoryId, async (newCategoryId, oldCategoryId) => {
   await loadWebsites()
 })
 
+// 加载壁纸
+const loadWallpaper = () => {
+  const saved = localStorage.getItem('selectedWallpaper')
+  if (saved) {
+    try {
+      const wallpaper = JSON.parse(saved)
+      wallpaperUrl.value = wallpaper.url
+    } catch (e) {
+      console.error('加载壁纸失败:', e)
+    }
+  }
+}
+
+// 监听壁纸变化事件
+const handleWallpaperChange = (event) => {
+  wallpaperUrl.value = event.detail.url
+}
+
 // 初始化
 onMounted(async () => {
   await loadCategoryName()
   await loadWebsites()
+  // 加载壁纸
+  loadWallpaper()
+  // 监听壁纸变化事件
+  window.addEventListener('wallpaper-changed', handleWallpaperChange)
+})
+
+// 组件卸载时移除事件监听
+onBeforeUnmount(() => {
+  window.removeEventListener('wallpaper-changed', handleWallpaperChange)
 })
 </script>
 
@@ -943,6 +973,25 @@ onMounted(async () => {
   font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
   display: flex;
   overflow: hidden; /* 隐藏溢出内容 */
+  position: relative;
+}
+
+/* 如果有壁纸，添加轻微遮罩层以确保内容可读 */
+.classify-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.classify-container .main-content {
+  position: relative;
+  z-index: 1;
 }
 
 /* 主内容区域 */
@@ -997,7 +1046,7 @@ onMounted(async () => {
 
 /* 主要内容卡片 */
 .content-card {
-  background: white;
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 20px;
   padding: 20px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);

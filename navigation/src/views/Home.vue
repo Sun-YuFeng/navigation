@@ -58,6 +58,9 @@ const authStore = useAuthStore()
 const userProfile = ref<UserProfile | null>(null)
 const searchKeyword = ref<string>('')
 
+// 壁纸相关
+const wallpaperUrl = ref<string | null>(null)
+
 // 模态框控制
 const activeModal = ref<string | null>(null)
 
@@ -921,6 +924,25 @@ const handleResize = () => {
   computeMetrics()
 }
 
+// 加载壁纸
+const loadWallpaper = () => {
+  const saved = localStorage.getItem('selectedWallpaper')
+  if (saved) {
+    try {
+      const wallpaper = JSON.parse(saved)
+      wallpaperUrl.value = wallpaper.url
+    } catch (e) {
+      console.error('加载壁纸失败:', e)
+    }
+  }
+}
+
+// 监听壁纸变化事件
+const handleWallpaperChange = (event: Event) => {
+  const customEvent = event as CustomEvent
+  wallpaperUrl.value = customEvent.detail.url
+}
+
 onMounted(() => {
   userProfile.value = authStore.user
   computeMetrics()
@@ -930,16 +952,21 @@ onMounted(() => {
   }, 0)
   // 加载用户收藏数据
   loadUserFavorites()
+  // 加载壁纸
+  loadWallpaper()
+  // 监听壁纸变化事件
+  window.addEventListener('wallpaper-changed', handleWallpaperChange)
   window.addEventListener('resize', handleResize)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('wallpaper-changed', handleWallpaperChange)
 })
 </script>
 
 <template>
-  <div class="home-container">
+  <div class="home-container" :style="wallpaperUrl ? { backgroundImage: `url(${wallpaperUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}">
     <!-- 主内容区域 -->
     <div class="main-content">
       <!-- 用户问候语 -->

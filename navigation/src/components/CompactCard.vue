@@ -1,5 +1,11 @@
 <template>
   <div class="card" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave" @click="handleCardClick">
+    <!-- 删除按钮 - 悬停3秒后显示 -->
+    <div v-if="showDelete && isHoveredLong" class="delete-btn" @click.stop="handleDelete">
+      <i class="uil uil-trash-alt"></i>
+      删除
+    </div>
+    
     <div class="card-container">
       <!-- 左侧图片区域 -->
       <div class="card-left">
@@ -104,14 +110,22 @@ const props = defineProps({
   comments: {
     type: Number,
     default: 12
+  },
+  
+  // 删除相关属性
+  showDelete: {
+    type: Boolean,
+    default: false
   }
 })
 
 // 定义组件事件
-const emit = defineEmits(['comment', 'detail', 'cardClick'])
+const emit = defineEmits(['comment', 'detail', 'cardClick', 'delete'])
 
 // 鼠标悬停状态
 const isHovered = ref(false)
+const isHoveredLong = ref(false)
+let hoverTimer = null
 
 const handleComment = (e) => {
   e.stopPropagation() // 阻止事件冒泡
@@ -126,15 +140,41 @@ const handleDetail = (e) => {
 
 const handleMouseEnter = () => {
   isHovered.value = true
+  
+  // 清除之前的计时器
+  if (hoverTimer) {
+    clearTimeout(hoverTimer)
+    hoverTimer = null
+  }
+  
+  // 设置3秒后显示删除按钮
+  if (props.showDelete) {
+    hoverTimer = setTimeout(() => {
+      isHoveredLong.value = true
+    }, 3000)
+  }
 }
 
 const handleMouseLeave = () => {
   isHovered.value = false
+  isHoveredLong.value = false
+  
+  // 清除计时器
+  if (hoverTimer) {
+    clearTimeout(hoverTimer)
+    hoverTimer = null
+  }
 }
 
 // 处理卡片点击事件
 const handleCardClick = () => {
   emit('cardClick')
+}
+
+// 处理删除点击事件
+const handleDelete = (e) => {
+  e.stopPropagation() // 阻止事件冒泡
+  emit('delete')
 }
 </script>
 
@@ -155,11 +195,41 @@ const handleCardClick = () => {
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 1px solid #e0e0e0;
+  position: relative;
 }
 
 .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* 删除按钮样式 */
+.delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #ff4d4f;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 10;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3);
+}
+
+.delete-btn:hover {
+  background-color: #ff7875;
+  transform: scale(1.05);
+}
+
+.delete-btn i {
+  font-size: 14px;
 }
 
 .card-container {

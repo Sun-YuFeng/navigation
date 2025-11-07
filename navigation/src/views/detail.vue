@@ -141,7 +141,7 @@
               </button>
               <button class="action-button" @click="handleComment">
                 <i class="fa fa-comment"></i>
-                <span>评论 ({{ article?.comments || 0 }})</span>
+                <span>评论 ({{ comments.length }})</span>
               </button>
             </div>
             
@@ -161,15 +161,16 @@
           <!-- 评论输入框 -->
           <div class="comment-input-container">
             <div class="flex gap-4">
-              <img src="https://picsum.photos/id/64/50/50" alt="你的头像" class="avatar">
+              <img :src="currentUserAvatar" alt="你的头像" class="avatar">
               <div class="flex-grow">
                 <textarea 
                   placeholder="分享你的想法..." 
                   class="comment-textarea"
                   rows="3"
+                  v-model="commentContent"
                 ></textarea>
                 <div class="flex justify-end mt-3">
-                  <button class="btn-primary">
+                  <button class="btn-primary" @click="submitComment">
                     发表评论
                   </button>
                 </div>
@@ -189,115 +190,174 @@
               </button>
             </div>
             <button class="view-all text-sm">
-              查看全部32条评论
+              查看全部{{ comments.length }}条评论
             </button>
           </div>
           
-          <!-- 评论列表 -->
-          <div class="comment-list">
-            <!-- 评论1 -->
-            <div class="comment-item">
-              <div class="flex gap-4">
-                <img src="https://picsum.photos/id/1005/50/50" alt="评论者头像" class="avatar">
-                <div class="flex-grow">
-                  <div class="comment-header">
-                    <div>
-                      <h4 class="comment-author">李开发</h4>
-                      <p class="comment-time">2天前</p>
-                    </div>
-                    <button class="more-btn">
-                      <i class="fa fa-ellipsis-h"></i>
-                    </button>
-                  </div>
-                  
-                  <div class="comment-content">
-                    非常实用的技巧！我最近在项目中使用React Hook Form，确实比自己手写表单逻辑要高效得多。另外，对于复杂的嵌套表单，推荐使用Yup进行 schema 验证，可以和Formik完美配合。
-                  </div>
-                  
-                  <div class="comment-actions">
-                    <button class="action-btn">
-                      <i class="fa fa-thumbs-up"></i>
-                      <span>24</span>
-                    </button>
-                    <button class="action-btn">
-                      <i class="fa fa-reply"></i>
-                      <span>回复</span>
-                    </button>
-                  </div>
-                  
-                  <!-- 评论的回复 -->
-                  <div class="replies-container">
-                    <div class="reply-item">
-                      <img src="https://picsum.photos/id/237/40/40" alt="回复者头像" class="reply-avatar">
-                      <div class="flex-grow">
-                        <div class="comment-header">
-                          <div>
-                            <h5 class="comment-author">张前端 <span class="author-badge">作者</span></h5>
-                            <p class="comment-time">1天前</p>
+            <!-- 评论列表 -->
+            <div class="comment-list">
+              <!-- 加载状态 -->
+              <div v-if="commentsLoading" class="loading-comments">
+                <i class="fa fa-spinner fa-spin"></i>
+                <span>加载评论中...</span>
+              </div>
+              
+              <!-- 空状态 -->
+              <div v-else-if="comments.length === 0" class="empty-comments">
+                <div class="empty-icon">
+                  <i class="fa fa-comments"></i>
+                </div>
+                <p class="empty-text">暂无评论，快来发表第一条评论吧！</p>
+              </div>
+              
+              <!-- 动态评论列表 -->
+              <div v-else>
+                <div v-for="comment in comments" :key="comment.id" class="comment-item">
+                  <div class="flex gap-4">
+                    <!-- 头像 -->
+                    <img 
+                      :src="comment.author_avatar || 'https://picsum.photos/id/1005/50/50'" 
+                      :alt="comment.author_name || '用户'" 
+                      class="avatar"
+                    >
+                    <div class="flex-grow">
+                      <!-- 评论头部 -->
+                      <div class="comment-header">
+                        <div>
+                          <h4 class="comment-author">
+                            {{ comment.author_name || '匿名用户' }}
+                            <span v-if="article && article.author_id === comment.user_id" class="author-badge">作者</span>
+                          </h4>
+                          <p class="comment-time">{{ formatTime(comment.created_at) }}</p>
+                        </div>
+                        <button class="more-btn" @click="handleCommentMenu(comment)">
+                          <i class="fa fa-ellipsis-h"></i>
+                        </button>
+                      </div>
+                      
+                      <!-- 评论内容 -->
+                      <div class="comment-content">
+                        {{ comment.content }}
+                      </div>
+                      
+                      <!-- 评论操作 -->
+                      <div class="comment-actions">
+                        <button 
+                          class="action-btn" 
+                          :class="{ liked: comment.user_liked }"
+                          @click="handleLikeComment(comment)"
+                        >
+                          <i 
+                            class="fa" 
+                            :class="comment.user_liked ? 'fa-thumbs-up' : 'fa-thumbs-o-up'"
+                          ></i>
+                          <span>{{ comment.like_count || 0 }}</span>
+                        </button>
+                        <button 
+                          class="action-btn reply-btn"
+                          @click="startReply(comment.id)"
+                        >
+                          <i class="fa fa-reply"></i>
+                          <span>回复</span>
+                        </button>
+                      </div>
+                      
+
+                      
+                      <!-- 评论的回复 -->
+                      <div v-if="comment.replies && comment.replies.length > 0" class="replies-container">
+                        <div 
+                          v-for="reply in comment.replies" 
+                          :key="reply.id" 
+                          class="reply-item"
+                        >
+                          <img 
+                            :src="reply.author_avatar || 'https://picsum.photos/id/237/40/40'" 
+                            :alt="reply.author_name || '用户'" 
+                            class="reply-avatar"
+                          >
+                          <div class="flex-grow">
+                            <div class="comment-header">
+                              <div>
+                                <h5 class="comment-author">
+                                  {{ reply.author_name || '匿名用户' }}
+                                  <span v-if="article && article.author_id === reply.user_id" class="author-badge">作者</span>
+                                  <span v-if="reply.reply_to_name" class="reply-to-text">回复 @{{ reply.reply_to_name }}</span>
+                                </h5>
+                                <p class="comment-time">{{ formatTime(reply.created_at) }}</p>
+                              </div>
+                            </div>
+                            
+                            <div class="comment-content">
+                              {{ reply.content }}
+                            </div>
+                            
+                            <div class="reply-actions">
+                              <button 
+                                class="action-btn" 
+                                :class="{ liked: reply.user_liked }"
+                                @click="handleLikeComment(reply)"
+                              >
+                                <i 
+                                  class="fa" 
+                                  :class="reply.user_liked ? 'fa-thumbs-up' : 'fa-thumbs-o-up'"
+                                ></i>
+                                <span>{{ reply.like_count || 0 }}</span>
+                              </button>
+                              <button 
+                                class="action-btn reply-btn"
+                                @click="startReply(comment.id, reply.user_id)"
+                              >
+                                <i class="fa fa-reply"></i>
+                                <span>回复</span>
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div class="comment-content">
-                          @李开发 是的，Yup确实是个好选择，它的schema定义非常直观，而且支持异步验证，很适合复杂场景。
-                        </div>
-                        
-                        <div class="reply-actions">
-                          <button class="action-btn">
-                            <i class="fa fa-thumbs-up"></i>
-                            <span>8</span>
-                          </button>
-                          <button class="action-btn">
-                            <i class="fa fa-reply"></i>
-                            <span>回复</span>
-                          </button>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <!-- 评论2 -->
-            <div class="comment-item">
-              <div class="flex gap-4">
-                <img src="https://picsum.photos/id/1012/50/50" alt="评论者头像" class="avatar">
-                <div class="flex-grow">
-                  <div class="comment-header">
-                    <div>
-                      <h4 class="comment-author">王程序</h4>
-                      <p class="comment-time">3天前</p>
+              
+              <!-- 加载更多评论 -->
+              <div v-if="comments.length > 0 && showAllComments" class="load-more">
+                <button class="load-more-btn" @click="loadMoreComments">
+                  加载更多评论
+                </button>
+              </div>
+              
+              <!-- 固定位置的回复输入框（始终显示在评论列表底部） -->
+              <div v-if="replyToComment" class="fixed-reply-container">
+                <div class="reply-input-card">
+                  <div class="reply-header">
+                    <span class="reply-target">回复给: {{ getReplyTargetName() }}</span>
+                    <button class="close-reply-btn" @click="cancelReply">
+                      <i class="fa fa-times"></i>
+                    </button>
+                  </div>
+                  <div class="flex gap-4">
+                    <img :src="currentUserAvatar" alt="你的头像" class="avatar">
+                    <div class="flex-grow">
+                      <textarea 
+                        :placeholder="getReplyPlaceholder()" 
+                        class="comment-textarea"
+                        rows="3"
+                        v-model="replyContent"
+                      ></textarea>
+                      <div class="flex justify-end gap-2 mt-3">
+                        <button class="btn-secondary" @click="cancelReply">
+                          取消
+                        </button>
+                        <button class="btn-primary" @click="submitReply(replyToComment)">
+                          发表回复
+                        </button>
+                      </div>
                     </div>
-                    <button class="more-btn">
-                      <i class="fa fa-ellipsis-h"></i>
-                    </button>
-                  </div>
-                  
-                  <div class="comment-content">
-                    请问对于动态表单（比如可以动态添加/删除表单项）的情况，哪种方案处理起来更优雅呢？我目前遇到的问题是动态增减项后，验证状态经常会出问题。
-                  </div>
-                  
-                  <div class="comment-actions">
-                    <button class="action-btn">
-                      <i class="fa fa-thumbs-up"></i>
-                      <span>15</span>
-                    </button>
-                    <button class="action-btn">
-                      <i class="fa fa-reply"></i>
-                      <span>回复</span>
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <!-- 加载更多评论 -->
-            <div class="load-more">
-              <button class="load-more-btn">
-                加载更多评论
-              </button>
-            </div>
-          </div>
         </section>
       </div>
 
@@ -317,6 +377,32 @@
             <i class="fa fa-magic"></i>
             <span>{{ isSummarizing ? '总结中...' : '一键总结' }}</span>
           </button>
+          
+          <!-- 总结结果卡片 -->
+          <div v-if="showSummaryCard && summaryResult" class="summary-card">
+            <div class="summary-card-header">
+              <h3 class="summary-title">
+                <i class="fa fa-file-text"></i>
+                文章总结
+              </h3>
+              <button class="summary-close-btn" @click="showSummaryCard = false">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+            <div class="summary-content">
+              <div class="summary-text">{{ summaryResult }}</div>
+            </div>
+            <div class="summary-card-footer">
+              <div class="summary-meta">
+                <i class="fa fa-clock-o"></i>
+                <span>AI智能生成</span>
+              </div>
+              <button class="summary-copy-btn" @click="copySummary">
+                <i class="fa fa-copy"></i>
+                复制总结
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- TA的精选 -->
@@ -402,6 +488,55 @@ const relatedLinksLoading = ref(false)
 // 一键总结功能
 const isSummarizing = ref(false)
 const summaryResult = ref('')
+const showSummaryCard = ref(false)
+
+// 评论功能
+const comments = ref([])
+const commentsLoading = ref(false)
+const commentContent = ref('')
+const replyToComment = ref(null)
+const replyContent = ref('')
+const currentSort = ref('latest')
+const showAllComments = ref(false)
+
+// 当前用户头像
+const currentUserAvatar = ref('https://picsum.photos/id/64/50/50') // 默认头像
+
+// 获取当前用户头像
+const getCurrentUserAvatar = async () => {
+  try {
+    const userId = getCurrentUserId()
+    if (!userId) {
+      // 未登录用户使用默认头像
+      currentUserAvatar.value = 'https://picsum.photos/id/64/50/50'
+      return
+    }
+    
+    // 从数据库中获取用户头像
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('avatar_url')
+      .eq('id', userId)
+      .single()
+    
+    if (error) {
+      console.warn('获取用户头像失败:', error)
+      // 使用默认头像
+      currentUserAvatar.value = 'https://picsum.photos/id/64/50/50'
+      return
+    }
+    
+    if (data && data.avatar_url) {
+      currentUserAvatar.value = data.avatar_url
+    } else {
+      // 用户没有设置头像，使用默认头像
+      currentUserAvatar.value = 'https://picsum.photos/id/64/50/50'
+    }
+  } catch (err) {
+    console.error('获取用户头像时出错:', err)
+    currentUserAvatar.value = 'https://picsum.photos/id/64/50/50'
+  }
+}
 
 // 处理返回按钮点击
 const handleBack = () => {
@@ -638,8 +773,8 @@ function MyForm() {
       // 获取相关链接
       await fetchRelatedLinks(data.id)
       
-      // 获取相关链接
-      await fetchRelatedLinks(data.id)
+      // 获取评论数据
+      await fetchComments(data.id)
     }
   } catch (err) {
     console.error('获取文章详情时出错:', err)
@@ -891,6 +1026,97 @@ const fetchSelectedWorks = async (userId, currentArticleId = null) => {
   }
 }
 
+// 获取评论数据（使用优化后的索引）
+const fetchComments = async (articleId) => {
+  try {
+    commentsLoading.value = true
+    
+    if (!articleId || articleId === 'default') {
+      console.warn('文章ID为空或默认，返回空评论列表')
+      comments.value = []
+      commentsLoading.value = false
+      return
+    }
+    
+    // 使用优化的查询从数据库获取评论数据
+    // 查询帖子的一级评论（parent_id为null或不存在）
+    const { data: topLevelCommentsData, error: topLevelError } = await supabase
+      .from('comment_details')
+      .select('*')
+      .eq('post_id', articleId)
+      .eq('is_deleted', false)
+      .is('parent_id', null)
+      .order('created_at', { ascending: false })
+    
+    if (topLevelError) {
+      console.error('获取一级评论失败:', topLevelError)
+      comments.value = []
+      return
+    }
+    
+    // 获取所有回复评论
+    const { data: replyCommentsData, error: replyError } = await supabase
+      .from('comment_details')
+      .select('*')
+      .eq('post_id', articleId)
+      .eq('is_deleted', false)
+      .not('parent_id', 'is', null)
+      .order('created_at', { ascending: true })
+    
+    if (replyError) {
+      console.error('获取回复评论失败:', replyError)
+      // 继续处理一级评论，只是没有回复
+    }
+    
+    // 构建评论树结构
+    const commentsMap = new Map()
+    const topLevelComments = []
+    
+    // 处理一级评论
+    if (topLevelCommentsData) {
+      topLevelCommentsData.forEach(comment => {
+        commentsMap.set(comment.id, {
+          ...comment,
+          replies: [],
+          user_liked: false
+        })
+        topLevelComments.push(commentsMap.get(comment.id))
+      })
+    }
+    
+    // 处理回复评论
+    if (replyCommentsData) {
+      replyCommentsData.forEach(comment => {
+        commentsMap.set(comment.id, {
+          ...comment,
+          replies: [],
+          user_liked: false
+        })
+        
+        // 如果是回复，添加到父评论的replies数组中
+        if (comment.parent_id) {
+          const parentComment = commentsMap.get(comment.parent_id)
+          if (parentComment) {
+            parentComment.replies.push(commentsMap.get(comment.id))
+          }
+        } else {
+          // 如果是顶级评论，添加到topLevelComments
+          topLevelComments.push(commentsMap.get(comment.id))
+        }
+      })
+    }
+    
+    comments.value = topLevelComments
+    console.log('获取到的评论数据:', comments.value)
+    
+  } catch (err) {
+    console.error('获取评论数据时出错:', err)
+    comments.value = []
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
 // 获取相关链接
 const fetchRelatedLinks = async (articleId) => {
   try {
@@ -1070,6 +1296,9 @@ onMounted(() => {
     // 如果没有ID，使用默认数据
     fetchArticleDetail(null)
   }
+  
+  // 获取当前用户头像
+  getCurrentUserAvatar()
 })
 
 // 点赞状态
@@ -1222,6 +1451,375 @@ const checkFavoriteStatus = async () => {
     isFavorited.value = !!data
   } catch (err) {
     console.error('检查收藏状态时出错:', err)
+  }
+}
+
+// 时间格式化函数
+const formatTime = (timestamp) => {
+  if (!timestamp) return ''
+  
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffMins < 1) return '刚刚'
+  if (diffMins < 60) return `${diffMins}分钟前`
+  if (diffHours < 24) return `${diffHours}小时前`
+  if (diffDays < 7) return `${diffDays}天前`
+  
+  return date.toLocaleDateString('zh-CN')
+}
+
+// 发表评论
+const submitComment = async () => {
+  try {
+    if (!commentContent.value.trim()) {
+      alert('请输入评论内容')
+      return
+    }
+    
+    // 获取当前用户ID
+    const userId = getCurrentUserId()
+    if (!userId) {
+      alert('请先登录后再发表评论')
+      return
+    }
+    
+    if (!article.value || !article.value.id) {
+      alert('文章信息不完整，无法发表评论')
+      return
+    }
+    
+    // 发布评论到数据库
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        user_id: userId,
+        post_id: article.value.id,
+        parent_id: null, // 顶级评论
+        content: commentContent.value.trim(),
+        reply_to_user_id: null
+      })
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('发表评论失败:', error)
+      alert('发表评论失败，请稍后重试')
+      return
+    }
+    
+    console.log('评论发表成功:', data)
+    
+    // 清空评论框
+    commentContent.value = ''
+    
+    // 重新加载评论
+    await fetchComments(article.value.id)
+    
+    // 显示成功提示
+    alert('评论发表成功！')
+    
+  } catch (err) {
+    console.error('发表评论时出错:', err)
+    alert('发表评论失败，请稍后重试')
+  }
+}
+
+// 回复评论
+const submitReply = async (commentId, replyToUserId = null) => {
+  try {
+    if (!replyContent.value.trim()) {
+      alert('请输入回复内容')
+      return
+    }
+    
+    // 获取当前用户ID
+    const userId = getCurrentUserId()
+    if (!userId) {
+      alert('请先登录后再回复')
+      return
+    }
+    
+    if (!article.value || !article.value.id) {
+      alert('文章信息不完整，无法回复评论')
+      return
+    }
+    
+    // 发布回复到数据库
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        user_id: userId,
+        post_id: article.value.id,
+        parent_id: commentId,
+        content: replyContent.value.trim(),
+        reply_to_user_id: replyToUserId
+      })
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('回复评论失败:', error)
+      alert('回复评论失败，请稍后重试')
+      return
+    }
+    
+    console.log('回复发表成功:', data)
+    
+    // 清空回复框
+    replyContent.value = ''
+    replyToComment.value = null
+    
+    // 重新加载评论
+    await fetchComments(article.value.id)
+    
+    // 显示成功提示
+    alert('回复发表成功！')
+    
+  } catch (err) {
+    console.error('回复评论时出错:', err)
+    alert('回复评论失败，请稍后重试')
+  }
+}
+
+// 点赞评论
+const handleCommentLike = async (commentId) => {
+  try {
+    // 获取当前用户ID
+    const userId = getCurrentUserId()
+    if (!userId) {
+      alert('请先登录后再点赞')
+      return
+    }
+    
+    // 检查用户是否已经点赞过该评论
+    const { data: existingLike, error: checkError } = await supabase
+      .from('comment_likes')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('comment_id', commentId)
+      .maybeSingle()
+    
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('检查评论点赞状态失败:', checkError)
+      return
+    }
+    
+    if (existingLike) {
+      // 取消点赞
+      const { error: deleteError } = await supabase
+        .from('comment_likes')
+        .delete()
+        .eq('user_id', userId)
+        .eq('comment_id', commentId)
+      
+      if (deleteError) {
+        console.error('取消评论点赞失败:', deleteError)
+        return
+      }
+      
+      // 更新评论点赞数
+      await updateCommentLikeCount(commentId, -1)
+      
+      console.log('取消评论点赞成功')
+    } else {
+      // 添加点赞
+      const { error: insertError } = await supabase
+        .from('comment_likes')
+        .insert({
+          user_id: userId,
+          comment_id: commentId
+        })
+      
+      if (insertError) {
+        console.error('添加评论点赞失败:', insertError)
+        return
+      }
+      
+      // 更新评论点赞数
+      await updateCommentLikeCount(commentId, 1)
+      
+      console.log('评论点赞成功')
+    }
+    
+    // 重新加载评论
+    if (article.value && article.value.id) {
+      await fetchComments(article.value.id)
+    }
+    
+  } catch (err) {
+    console.error('处理评论点赞时出错:', err)
+  }
+}
+
+// 更新评论点赞数
+const updateCommentLikeCount = async (commentId, increment) => {
+  try {
+    // 获取当前点赞数
+    const { data: comment, error: getError } = await supabase
+      .from('comments')
+      .select('like_count')
+      .eq('id', commentId)
+      .single()
+    
+    if (getError) {
+      console.error('获取评论点赞数失败:', getError)
+      return
+    }
+    
+    const newLikeCount = Math.max(0, (comment?.like_count || 0) + increment)
+    
+    // 更新点赞数
+    const { error: updateError } = await supabase
+      .from('comments')
+      .update({ like_count: newLikeCount })
+      .eq('id', commentId)
+    
+    if (updateError) {
+      console.error('更新评论点赞数失败:', updateError)
+    }
+    
+  } catch (err) {
+    console.error('更新评论点赞数时出错:', err)
+  }
+}
+
+// 开始回复
+const startReply = (commentId, replyToUserId = null) => {
+  console.log('开始回复评论:', commentId, '回复给用户:', replyToUserId)
+  replyToComment.value = commentId
+  replyContent.value = ''
+  
+  // 如果有被回复的用户，找到对应的评论并@用户名
+  if (replyToUserId) {
+    const targetComment = findCommentById(commentId)
+    if (targetComment && targetComment.author_name) {
+      replyContent.value = `@${targetComment.author_name} `
+    }
+  }
+  
+  // 滚动到回复框位置
+  setTimeout(() => {
+    const replyContainer = document.querySelector('.fixed-reply-container')
+    if (replyContainer) {
+      replyContainer.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, 100)
+}
+
+// 获取回复框占位符文本
+const getReplyPlaceholder = () => {
+  if (!replyToComment.value) return '请输入回复内容...'
+  
+  const targetComment = findCommentById(replyToComment.value)
+  if (targetComment && targetComment.author_name) {
+    return `回复 @${targetComment.author_name}...`
+  }
+  
+  return '请输入回复内容...'
+}
+
+// 获取回复目标用户名称
+const getReplyTargetName = () => {
+  if (!replyToComment.value) return '未知用户'
+  
+  const targetComment = findCommentById(replyToComment.value)
+  if (targetComment && targetComment.author_name) {
+    return `@${targetComment.author_name}`
+  }
+  
+  return '未知用户'
+}
+
+// 取消回复
+const cancelReply = () => {
+  replyToComment.value = null
+  replyContent.value = ''
+}
+
+// 根据ID查找评论
+const findCommentById = (commentId) => {
+  const findComment = (commentList) => {
+    for (const comment of commentList) {
+      if (comment.id === commentId) {
+        return comment
+      }
+      if (comment.replies && comment.replies.length > 0) {
+        const found = findComment(comment.replies)
+        if (found) return found
+      }
+    }
+    return null
+  }
+  
+  return findComment(comments.value)
+}
+
+// 处理评论菜单
+const handleCommentMenu = (comment) => {
+  console.log('处理评论菜单:', comment)
+  // 这里可以添加举报、删除等操作
+}
+
+// 加载更多评论
+const loadMoreComments = async () => {
+  // 这里可以添加分页加载逻辑
+  console.log('加载更多评论')
+}
+
+// 点赞评论
+const handleLikeComment = async (comment) => {
+  try {
+    const userId = getCurrentUserId()
+    if (!userId) {
+      alert('请先登录后再点赞')
+      return
+    }
+    
+    if (comment.user_liked) {
+      // 取消点赞
+      const { error } = await supabase
+        .from('comment_likes')
+        .delete()
+        .eq('comment_id', comment.id)
+        .eq('user_id', userId)
+      
+      if (error) {
+        console.error('取消点赞失败:', error)
+        return
+      }
+      
+      comment.user_liked = false
+      comment.like_count = Math.max(0, (comment.like_count || 0) - 1)
+      
+      // 更新评论点赞数
+      await updateCommentLikeCount(comment.id, -1)
+    } else {
+      // 点赞
+      const { error } = await supabase
+        .from('comment_likes')
+        .insert({
+          comment_id: comment.id,
+          user_id: userId
+        })
+      
+      if (error) {
+        console.error('点赞失败:', error)
+        return
+      }
+      
+      comment.user_liked = true
+      comment.like_count = (comment.like_count || 0) + 1
+      
+      // 更新评论点赞数
+      await updateCommentLikeCount(comment.id, 1)
+    }
+  } catch (err) {
+    console.error('处理评论点赞时出错:', err)
   }
 }
 
@@ -1592,15 +2190,27 @@ const handleSummary = async () => {
     
     if (summaryText) {
       summaryResult.value = summaryText
+      showSummaryCard.value = true
       
-      // 显示总结结果（使用更好的展示方式）
-      alert(`文章总结完成：
-
-${summaryText}`)
+      // 滚动到总结卡片位置
+      setTimeout(() => {
+        const summaryCard = document.querySelector('.summary-card')
+        if (summaryCard) {
+          summaryCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }
+      }, 100)
     } else {
       console.warn('未找到预期的总结内容，完整返回结果:', result)
       summaryResult.value = JSON.stringify(result, null, 2)
-      alert(`文章总结完成，但返回格式异常。请查看控制台获取详细信息。`)
+      showSummaryCard.value = true
+      
+      // 滚动到总结卡片位置
+      setTimeout(() => {
+        const summaryCard = document.querySelector('.summary-card')
+        if (summaryCard) {
+          summaryCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }
+      }, 100)
     }
     
   } catch (error) {
@@ -1611,19 +2221,43 @@ ${summaryText}`)
   }
 }
 
-// 评论点赞交互
-const handleCommentLike = (event) => {
-  const btn = event.currentTarget
-  const countSpan = btn.querySelector('span')
-  if (countSpan) {
-    let count = parseInt(countSpan.textContent)
+// 复制总结内容
+const copySummary = async () => {
+  try {
+    await navigator.clipboard.writeText(summaryResult.value)
+    // 显示复制成功提示
+    const copyBtn = document.querySelector('.summary-copy-btn')
+    if (copyBtn) {
+      const originalText = copyBtn.innerHTML
+      copyBtn.innerHTML = '<i class="fa fa-check"></i> 已复制'
+      copyBtn.style.backgroundColor = '#10b981'
+      
+      setTimeout(() => {
+        copyBtn.innerHTML = originalText
+        copyBtn.style.backgroundColor = ''
+      }, 2000)
+    }
+  } catch (err) {
+    console.error('复制失败:', err)
+    // 备用方案
+    const textArea = document.createElement('textarea')
+    textArea.value = summaryResult.value
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
     
-    if (btn.classList.contains('active')) {
-      btn.classList.remove('active')
-      countSpan.textContent = count - 1
-    } else {
-      btn.classList.add('active')
-      countSpan.textContent = count + 1
+    // 显示复制成功提示
+    const copyBtn = document.querySelector('.summary-copy-btn')
+    if (copyBtn) {
+      const originalText = copyBtn.innerHTML
+      copyBtn.innerHTML = '<i class="fa fa-check"></i> 已复制'
+      copyBtn.style.backgroundColor = '#10b981'
+      
+      setTimeout(() => {
+        copyBtn.innerHTML = originalText
+        copyBtn.style.backgroundColor = ''
+      }, 2000)
     }
   }
 }
@@ -1745,34 +2379,9 @@ const handleSortChange = (event) => {
   }
 }
 
-/* 保留原有的加载状态样式（用于错误状态） */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f4f6;
-  border-left: 4px solid #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-.loading-container p {
-  color: #6b7280;
-  font-size: 1rem;
 }
 
 /* 错误状态样式 */
@@ -1885,14 +2494,6 @@ const handleSortChange = (event) => {
   margin: 15px auto;
   max-width: 1450px;
   padding: 0 5px;
-}
-
-/* 侧边栏样式 */
-.sidebar {
-  width: 325px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 /* 侧边栏样式 */
@@ -2299,6 +2900,38 @@ const handleSortChange = (event) => {
   margin-top: 1.5rem;
 }
 
+/* 评论加载状态 */
+.loading-comments {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.loading-comments .fa-spinner {
+  margin-right: 0.5rem;
+}
+
+/* 评论空状态 */
+.empty-comments {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #6b7280;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #d1d5db;
+}
+
+.empty-text {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
 @media (min-width: 768px) {
   .comment-section {
     padding: 2rem;
@@ -2571,6 +3204,152 @@ const handleSortChange = (event) => {
   background-color: #fafafa;
 }
 
+/* 回复输入框 */
+.reply-input-container {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.btn-secondary {
+  padding: 0.5rem 1.25rem;
+  background-color: #6b7280;
+  color: white;
+  border-radius: 0.5rem;
+  border: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.btn-secondary:hover {
+  background-color: #4b5563;
+}
+
+/* 回复对象标记 */
+.reply-to-text {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-left: 0.5rem;
+}
+
+/* 评论内的回复输入框 */
+.comment-item .reply-input-container {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background-color: #f9fafb;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+}
+
+.comment-item .reply-input-container .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.comment-item .reply-input-container .comment-textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: vertical;
+  background-color: white;
+}
+
+.comment-item .reply-input-container .comment-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.comment-item .reply-input-container .btn-secondary {
+  padding: 0.5rem 1.25rem;
+  background-color: #6b7280;
+  color: white;
+  border-radius: 0.5rem;
+  border: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.comment-item .reply-input-container .btn-secondary:hover {
+  background-color: #4b5563;
+}
+
+.comment-item .reply-input-container .btn-primary {
+  padding: 0.5rem 1.25rem;
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 0.5rem;
+  border: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.comment-item .reply-input-container .btn-primary:hover {
+  background-color: #2563eb;
+}
+
+/* 固定位置的回复输入框 */
+.fixed-reply-container {
+  margin-top: 2rem;
+  position: relative;
+}
+
+.reply-input-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+  position: relative;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.reply-target {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.close-reply-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-reply-btn:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
   .content-area {
@@ -2642,45 +3421,6 @@ const handleSortChange = (event) => {
   background-color: #f8f9fa;
 }
 
-/* TA的精选 - 加载状态和空状态样式 */
-.loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.loading-spinner-small {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #f3f4f6;
-  border-left: 2px solid #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-right: 8px;
-}
-
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  color: #9ca3af;
-  font-size: 14px;
-  font-style: italic;
-}
-
-/* 确保列表项有正确的光标样式 */
-.list-item {
-  cursor: pointer;
-}
-
-.list-item:hover {
-  background-color: #f8f9fa;
-}
-
 /* 一键总结按钮包装器样式 */
 .summary-button-wrapper {
   width: 100%;
@@ -2688,52 +3428,6 @@ const handleSortChange = (event) => {
 }
 
 /* 一键总结按钮样式 */
-.summary-button {
-  width: 100%;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-}
-
-.summary-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-}
-
-.summary-button:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
-}
-
-.summary-button:disabled {
-  background: linear-gradient(135deg, #9ca3af, #6b7280);
-  cursor: not-allowed;
-  opacity: 0.7;
-  transform: none;
-  box-shadow: none;
-}
-
-.summary-button i {
-  font-size: 16px;
-}
-
-.summary-button span {
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .summary-button {
   width: 100%;
   padding: 12px 16px;
@@ -2900,23 +3594,6 @@ const handleSortChange = (event) => {
   border-color: #e9ecef !important;
 }
 
-.link-info-text {
-  font-size: 0.75rem;
-  color: #9ca3af;
-  font-style: italic;
-}
-
-.info-item {
-  cursor: default !important;
-  opacity: 0.7;
-}
-
-.info-item:hover {
-  transform: none !important;
-  box-shadow: none !important;
-  border-color: #e9ecef !important;
-}
-
 /* 响应式设计 */
 @media (max-width: 768px) {
   .related-links-section {
@@ -2932,6 +3609,189 @@ const handleSortChange = (event) => {
     width: 2rem;
     height: 2rem;
     font-size: 1rem;
+  }
+}
+
+/* 总结卡片样式 */
+.summary-card {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-top: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  animation: slideInUp 0.3s ease-out;
+}
+
+.summary-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.summary-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+}
+
+.summary-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.summary-title i {
+  font-size: 18px;
+}
+
+.summary-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.summary-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.summary-content {
+  padding: 20px;
+  background: white;
+}
+
+.summary-text {
+  color: #374151;
+  line-height: 1.6;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.summary-text::-webkit-scrollbar {
+  width: 4px;
+}
+
+.summary-text::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 2px;
+}
+
+.summary-text::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.summary-text::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.summary-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.summary-meta i {
+  font-size: 12px;
+}
+
+.summary-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.summary-copy-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.summary-copy-btn:active {
+  transform: translateY(0);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .summary-card {
+    margin-top: 12px;
+  }
+  
+  .summary-card-header {
+    padding: 12px 16px;
+  }
+  
+  .summary-title {
+    font-size: 14px;
+  }
+  
+  .summary-content {
+    padding: 16px;
+  }
+  
+  .summary-text {
+    font-size: 13px;
+    max-height: 200px;
+  }
+  
+  .summary-card-footer {
+    padding: 10px 16px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .summary-copy-btn {
+    align-self: flex-end;
   }
 }
 </style>

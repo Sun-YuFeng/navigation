@@ -528,6 +528,15 @@
   text-decoration: none;
 }
 
+/* 暂无最新发布内容样式 */
+.no-posts {
+  text-align: center;
+  color: #86909C;
+  font-size: 14px;
+  padding: 20px;
+  font-style: italic;
+}
+
 /* 最新动态卡片样式 */
 .latest-news-card {
   background-color: #fff;

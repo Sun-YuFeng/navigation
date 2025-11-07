@@ -46,7 +46,9 @@
             :likes="post.likes"
             :favorites="post.favorites"
             :comments="post.comments"
+            :show-delete="isViewingOwnProfile"
             @cardClick="handlePostClick(post.id)"
+            @delete="handleDeletePost(post)"
           />
         </div>
       </div>
@@ -67,7 +69,9 @@
             :likes="post.likes"
             :favorites="post.favorites"
             :comments="post.comments"
+            :show-delete="isViewingOwnProfile"
             @cardClick="handlePostClick(post.id)"
+            @delete="handleDeletePost(post)"
           />
         </div>
       </div>
@@ -88,6 +92,7 @@
             :likes="post.likes"
             :favorites="post.favorites"
             :comments="post.comments"
+            :show-delete="false"
             @cardClick="handlePostClick(post.id)"
           />
         </div>
@@ -99,9 +104,9 @@
           <div class="title">全部共 {{ followingUsers.length }} 个关注用户</div>
           <div class="user-list">
             <div v-for="user in followingUsers" :key="user.id" class="user-card">
-              <img :src="user.avatar" :alt="user.name" class="user-avatar">
+              <img :src="user.avatar" :alt="user.name" class="user-avatar" @click="handleUserClick(user)">
               <div class="user-info">
-                <div class="user-name">{{ user.name }}</div>
+                <div class="user-name" @click="handleUserClick(user)">{{ user.name }}</div>
                 <div class="user-desc">{{ user.description }}</div>
                 <button 
                   class="follow-btn"
@@ -600,12 +605,54 @@ const handleFollowUser = async (user) => {
   }
 }
 
+// 处理用户点击事件，跳转到该用户的个人中心
+const handleUserClick = (user) => {
+  if (user.id) {
+    // 跳转到该用户的个人中心页面，传递用户ID
+    router.push(`/person-center/${user.id}`)
+  }
+}
+
 // 获取关注按钮的文本
 const getFollowButtonText = (user) => {
   if (isViewingOwnProfile.value) {
     return '已关注'
   }
   return user.isFollowing ? '已关注' : '+ 关注'
+}
+
+// 处理删除帖子操作
+const handleDeletePost = async (post) => {
+  try {
+    // 确认是否删除
+    if (confirm(`确定要删除帖子《${post.title}》吗？此操作不可撤销。`)) {
+      // 调用数据库删除文章
+      const { error } = await supabase
+        .from('articles')
+        .delete()
+        .eq('id', post.id)
+
+      if (error) {
+        console.error('删除帖子失败:', error)
+        alert('删除帖子失败，请重试')
+      } else {
+        console.log('删除帖子成功')
+        
+        // 从本地数据中移除该帖子
+        posts.value = posts.value.filter(p => p.id !== post.id)
+        recentPosts.value = recentPosts.value.filter(p => p.id !== post.id)
+        hotPosts.value = hotPosts.value.filter(p => p.id !== post.id)
+        
+        // 更新AuthorCard的文章数量
+        authorInfo.value.articleCount = posts.value.length
+        
+        alert('帖子删除成功')
+      }
+    }
+  } catch (error) {
+    console.error('处理删除帖子时出错:', error)
+    alert('删除失败，请重试')
+  }
 }
 
 // 从数据库获取用户资料
@@ -693,6 +740,11 @@ watch(currentUserId, async (newUserId, oldUserId) => {
     // 如果当前正在查看收藏页，重新加载收藏数据
     if (currentNav.value === 'collect') {
       await loadUserFavorites()
+    }
+    
+    // 如果当前正在查看关注页，重新加载关注用户数据
+    if (currentNav.value === 'attention') {
+      await loadFollowingUsers()
     }
   }
 })
@@ -889,6 +941,13 @@ watch(currentUserId, async (newUserId, oldUserId) => {
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid #409eff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  border-color: #1890ff;
+  transform: scale(1.05);
 }
 
 .user-info {
@@ -903,6 +962,13 @@ watch(currentUserId, async (newUserId, oldUserId) => {
   font-size: 19px;
   font-weight: bold;
   color: #409eff;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.user-name:hover {
+  color: #1890ff;
+  text-decoration: underline;
 }
 
 .user-desc {

@@ -3,12 +3,16 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import ProfileEditCard from '../components/ProfileEditCard.vue'
+import ThemeSettingsCard from '../components/ThemeSettingsCard.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 // 控制个人资料编辑卡片显示
 const showProfileCard = ref(false)
+
+// 控制主题设置卡片显示
+const showThemeCard = ref(false)
 
 // 设置选项
 const settings = ref([
@@ -58,6 +62,9 @@ const handleSettingClick = (setting) => {
   if (setting.id === 1) {
     // 账户设置 - 打开个人资料编辑卡片
     showProfileCard.value = true
+  } else if (setting.id === 4) {
+    // 主题设置 - 打开主题设置卡片
+    showThemeCard.value = true
   } else {
     // 其他设置项的处理逻辑
     console.log('点击设置项:', setting.title)
@@ -122,6 +129,9 @@ onMounted(() => {
 
     <!-- 个人资料编辑卡片 -->
     <ProfileEditCard v-model:show="showProfileCard" />
+    
+    <!-- 主题设置卡片 -->
+    <ThemeSettingsCard v-model:show="showThemeCard" />
   </div>
 </template>
 

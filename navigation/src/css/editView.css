@@ -300,6 +300,12 @@ button.draft:hover {
   align-items: center;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .editor-header h3 {
   color: #222;
   font-size: 18px;
@@ -309,6 +315,12 @@ button.draft:hover {
 .editor-header p {
   color: #666;
   font-size: 13px;
+}
+
+.vditor-container {
+  min-height: 800px;
+  background-color: #fff;
+  position: relative;
 }
 
 #vditor {
@@ -987,4 +999,443 @@ button.draft:hover {
 
 .change-cover-btn:hover {
   background: #5a6268;
+}
+
+/* AI辅助功能样式 */
+.ai-button-wrapper {
+  position: relative;
+}
+
+.ai-header-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+}
+
+.ai-header-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.ai-header-button:active {
+  transform: translateY(0);
+}
+
+/* AI气泡提示样式 */
+.ai-tooltip {
+  position: absolute;
+  right: 0;
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 220px;
+  max-width: 280px;
+  animation: tooltipFadeIn 0.3s ease-out;
+  cursor: pointer;
+}
+
+/* 气泡在按钮下方 */
+.ai-tooltip-bottom {
+  top: calc(100% + 12px);
+}
+
+.ai-tooltip-bottom::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 20px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid #667eea;
+}
+
+.ai-tooltip-bottom::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 20px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid white;
+}
+
+.tooltip-arrow-bottom {
+  /* 箭头已通过::before和::after实现 */
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip-content {
+  position: relative;
+  z-index: 1;
+}
+
+.tooltip-content p {
+  margin: 0;
+  color: #333;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tooltip-arrow {
+  /* 箭头已通过::before和::after实现 */
+}
+
+.ai-icon {
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-assistant-panel {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  border: 2px solid #e3f2fd;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* 悬浮面板背景遮罩 */
+.ai-panel-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: backdropFadeIn 0.3s ease-out;
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* 悬浮在视口中的AI面板 */
+.ai-assistant-panel-floating {
+  position: relative;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  margin: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  animation: panelFadeIn 0.3s ease-out;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 悬浮面板内容区域可滚动 */
+.ai-assistant-panel-floating .ai-panel-content {
+  overflow-y: auto;
+  flex: 1;
+  max-height: calc(80vh - 60px);
+  /* padding 已在 .ai-panel-content 基础样式中定义 */
+}
+
+/* 悬浮面板滚动条样式 */
+.ai-assistant-panel-floating .ai-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-assistant-panel-floating .ai-panel-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.ai-assistant-panel-floating .ai-panel-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.ai-assistant-panel-floating .ai-panel-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.ai-panel-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-panel-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ai-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 24px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.ai-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.ai-panel-content {
+  padding: 20px;
+}
+
+.ai-input-section {
+  margin-bottom: 15px;
+}
+
+.ai-input-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.3s;
+}
+
+.ai-input-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.ai-action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ai-action-btn {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: white;
+}
+
+.ai-action-polish {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.ai-action-polish:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.ai-action-supplement {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.ai-action-supplement:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+}
+
+.ai-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.ai-result-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #e3f2fd;
+}
+
+.ai-result-header {
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.ai-result-content {
+  margin-bottom: 15px;
+}
+
+.ai-result-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  background: #f8f9fa;
+  cursor: text;
+}
+
+.ai-result-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.ai-result-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ai-result-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ai-result-insert {
+  background: #28a745;
+  color: white;
+}
+
+.ai-result-insert:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.ai-result-copy {
+  background: #17a2b8;
+  color: white;
+}
+
+.ai-result-copy:hover {
+  background: #138496;
+  transform: translateY(-1px);
+}
+
+.ai-result-clear {
+  background: #6c757d;
+  color: white;
+}
+
+.ai-result-clear:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.ai-error-message {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+}
+
+/* 成功消息样式（通过类名动态切换） */
+.ai-success-message {
+  background: #d4edda !important;
+  border: 1px solid #28a745 !important;
+  color: #155724 !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header-actions {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .ai-header-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .ai-tooltip {
+    min-width: 180px;
+    max-width: 220px;
+    font-size: 12px;
+  }
+
+  .ai-action-buttons {
+    flex-direction: column;
+  }
+
+  .ai-result-actions {
+    flex-direction: column;
+  }
+
+  .ai-result-btn {
+    width: 100%;
+  }
 }

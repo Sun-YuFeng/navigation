@@ -38,218 +38,257 @@
     
     <!-- 主内容区域 -->
     <div class="market-content">
-      <!-- 左侧筛选卡片 -->
-      <div class="filter-card-container">
-        <div class="filter-card">
-          <div class="filter-title">
-            <span class="filter-icon">▼</span> 分类筛选
-          </div>
+      <!-- 左侧筛选卡片区域 -->
+      <div class="left-sidebar">
+        <!-- 筛选卡片 -->
+        <div class="filter-card-container">
+          <div class="filter-card">
+            <div class="filter-title">
+              <span class="filter-icon">▼</span> 分类筛选
+            </div>
 
-          <div class="filter-group">
-            <div class="group-title">内容类型</div>
-            <div class="checkbox-item">
-              <input type="checkbox" class="checkbox" v-model="filters.contentTypes.workflow" @change="updateFilters"> 工作流
+            <div class="filter-group">
+              <div class="group-title">内容类型</div>
+              <div class="checkbox-item">
+                <input type="checkbox" class="checkbox" v-model="filters.contentTypes.workflow" @change="updateFilters"> 工作流
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" class="checkbox" v-model="filters.contentTypes.agent" @change="updateFilters"> 智能体
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" class="checkbox" v-model="filters.contentTypes.tutorial" @change="updateFilters"> 教程
+              </div>
             </div>
-            <div class="checkbox-item">
-              <input type="checkbox" class="checkbox" v-model="filters.contentTypes.agent" @change="updateFilters"> 智能体
+
+            <div class="filter-group">
+              <div class="group-title">内容类型</div>
+              <div class="tag-group">
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('自动化工作流') }"
+                  @click="toggleSubType('自动化工作流')"
+                >自动化工作流</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('手动协作流') }"
+                  @click="toggleSubType('手动协作流')"
+                >手动协作流</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('跨工具集成流') }"
+                  @click="toggleSubType('跨工具集成流')"
+                >跨工具集成流</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('AI助手型') }"
+                  @click="toggleSubType('AI助手型')"
+                >AI助手型</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('数据处理型') }"
+                  @click="toggleSubType('数据处理型')"
+                >数据处理型</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('决策支持型') }"
+                  @click="toggleSubType('决策支持型')"
+                >决策支持型</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('工具入门') }"
+                  @click="toggleSubType('工具入门')"
+                >工具入门</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('场景案例') }"
+                  @click="toggleSubType('场景案例')"
+                >场景案例</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.subTypes.includes('故障排查') }"
+                  @click="toggleSubType('故障排查')"
+                >故障排查</span>
+              </div>
             </div>
-            <div class="checkbox-item">
-              <input type="checkbox" class="checkbox" v-model="filters.contentTypes.tutorial" @change="updateFilters"> 教程
+
+            <div class="filter-group">
+              <div class="group-title">应用场景</div>
+              <div class="tag-group">
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('电商运营') }"
+                  @click="toggleScenario('电商运营')"
+                >电商运营</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('新媒体') }"
+                  @click="toggleScenario('新媒体')"
+                >新媒体</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('人力资源') }"
+                  @click="toggleScenario('人力资源')"
+                >人力资源</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('财务') }"
+                  @click="toggleScenario('财务')"
+                >财务</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('客户服务') }"
+                  @click="toggleScenario('客户服务')"
+                >客户服务</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('市场营销') }"
+                  @click="toggleScenario('市场营销')"
+                >市场营销</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('数据采集') }"
+                  @click="toggleScenario('数据采集')"
+                >数据采集</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('流程审批') }"
+                  @click="toggleScenario('流程审批')"
+                >流程审批</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('内容分发') }"
+                  @click="toggleScenario('内容分发')"
+                >内容分发</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('智能客服') }"
+                  @click="toggleScenario('智能客服')"
+                >智能客服</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('报表生成') }"
+                  @click="toggleScenario('报表生成')"
+                >报表生成</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.scenarios.includes('监控预警') }"
+                  @click="toggleScenario('监控预警')"
+                >监控预警</span>
+              </div>
+            </div>
+
+            <div class="filter-group">
+              <div class="group-title">来源平台</div>
+              <div class="tag-group">
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.platforms.includes('n8n') }"
+                  @click="togglePlatform('n8n')"
+                >n8n</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.platforms.includes('Zapier') }"
+                  @click="togglePlatform('Zapier')"
+                >Zapier</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.platforms.includes('Make') }"
+                  @click="togglePlatform('Make')"
+                >Make</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.platforms.includes('扣子') }"
+                  @click="togglePlatform('扣子')"
+                >扣子</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.platforms.includes('IFTTT') }"
+                  @click="togglePlatform('IFTTT')"
+                >IFTTT</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.platforms.includes('Power Automate') }"
+                  @click="togglePlatform('Power Automate')"
+                >Power Automate</span>
+              </div>
+            </div>
+
+            <div class="filter-group">
+              <div class="group-title">属性</div>
+              <div class="tag-group">
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.attributes.includes('开源免费') }"
+                  @click="toggleAttribute('开源免费')"
+                >开源免费</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.attributes.includes('商业付费') }"
+                  @click="toggleAttribute('商业付费')"
+                >商业付费</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.attributes.includes('试用版') }"
+                  @click="toggleAttribute('试用版')"
+                >试用版</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.attributes.includes('个人原创') }"
+                  @click="toggleAttribute('个人原创')"
+                >个人原创</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.attributes.includes('团队协作') }"
+                  @click="toggleAttribute('团队协作')"
+                >团队协作</span>
+                <span 
+                  class="tag" 
+                  :class="{ selected: filters.attributes.includes('官方模板') }"
+                  @click="toggleAttribute('官方模板')"
+                >官方模板</span>
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button class="filter-btn reset-btn" @click="resetFilters">重置筛选</button>
+              <button class="filter-btn apply-btn" @click="applyFilters">应用筛选</button>
             </div>
           </div>
-
-          <div class="filter-group">
-            <div class="group-title">内容类型</div>
-            <div class="tag-group">
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('自动化工作流') }"
-                @click="toggleSubType('自动化工作流')"
-              >自动化工作流</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('手动协作流') }"
-                @click="toggleSubType('手动协作流')"
-              >手动协作流</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('跨工具集成流') }"
-                @click="toggleSubType('跨工具集成流')"
-              >跨工具集成流</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('AI助手型') }"
-                @click="toggleSubType('AI助手型')"
-              >AI助手型</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('数据处理型') }"
-                @click="toggleSubType('数据处理型')"
-              >数据处理型</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('决策支持型') }"
-                @click="toggleSubType('决策支持型')"
-              >决策支持型</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('工具入门') }"
-                @click="toggleSubType('工具入门')"
-              >工具入门</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('场景案例') }"
-                @click="toggleSubType('场景案例')"
-              >场景案例</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.subTypes.includes('故障排查') }"
-                @click="toggleSubType('故障排查')"
-              >故障排查</span>
-            </div>
+        </div>
+        
+        <!-- 去广场看看按钮 -->
+        <div class="community-button-container">
+          <button class="community-button" @click="goToCommunity">
+            <i class="uil uil-compass"></i>
+            去广场看看
+          </button>
+        </div>
+        
+        <!-- 去搭建区域 -->
+        <div class="build-platforms-card">
+          <div class="build-platforms-header">
+            <h3>去搭建</h3>
           </div>
-
-          <div class="filter-group">
-            <div class="group-title">应用场景</div>
-            <div class="tag-group">
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('电商运营') }"
-                @click="toggleScenario('电商运营')"
-              >电商运营</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('新媒体') }"
-                @click="toggleScenario('新媒体')"
-              >新媒体</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('人力资源') }"
-                @click="toggleScenario('人力资源')"
-              >人力资源</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('财务') }"
-                @click="toggleScenario('财务')"
-              >财务</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('客户服务') }"
-                @click="toggleScenario('客户服务')"
-              >客户服务</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('市场营销') }"
-                @click="toggleScenario('市场营销')"
-              >市场营销</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('数据采集') }"
-                @click="toggleScenario('数据采集')"
-              >数据采集</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('流程审批') }"
-                @click="toggleScenario('流程审批')"
-              >流程审批</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('内容分发') }"
-                @click="toggleScenario('内容分发')"
-              >内容分发</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('智能客服') }"
-                @click="toggleScenario('智能客服')"
-              >智能客服</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('报表生成') }"
-                @click="toggleScenario('报表生成')"
-              >报表生成</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.scenarios.includes('监控预警') }"
-                @click="toggleScenario('监控预警')"
-              >监控预警</span>
+          <div class="build-platforms-content">
+            <div 
+              v-for="platform in buildPlatforms" 
+              :key="platform.name"
+              class="build-platform-card"
+              @click="openPlatform(platform.url)"
+            >
+              <div class="build-card-icon-container">
+                <img 
+                  :src="getPlatformIcon(platform.url)" 
+                  :alt="platform.name + '图标'" 
+                  class="build-card-icon"
+                  @error="handlePlatformIconError($event, platform)"
+                >
+              </div>
+              <div class="build-card-text">
+                <h3 class="build-card-title">{{ platform.name }}</h3>
+                <p class="build-card-desc">{{ platform.desc }}</p>
+              </div>
             </div>
-          </div>
-
-          <div class="filter-group">
-            <div class="group-title">来源平台</div>
-            <div class="tag-group">
-              <span 
-                class="tag" 
-                :class="{ selected: filters.platforms.includes('n8n') }"
-                @click="togglePlatform('n8n')"
-              >n8n</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.platforms.includes('Zapier') }"
-                @click="togglePlatform('Zapier')"
-              >Zapier</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.platforms.includes('Make') }"
-                @click="togglePlatform('Make')"
-              >Make</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.platforms.includes('扣子') }"
-                @click="togglePlatform('扣子')"
-              >扣子</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.platforms.includes('IFTTT') }"
-                @click="togglePlatform('IFTTT')"
-              >IFTTT</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.platforms.includes('Power Automate') }"
-                @click="togglePlatform('Power Automate')"
-              >Power Automate</span>
-            </div>
-          </div>
-
-          <div class="filter-group">
-            <div class="group-title">属性</div>
-            <div class="tag-group">
-              <span 
-                class="tag" 
-                :class="{ selected: filters.attributes.includes('开源免费') }"
-                @click="toggleAttribute('开源免费')"
-              >开源免费</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.attributes.includes('商业付费') }"
-                @click="toggleAttribute('商业付费')"
-              >商业付费</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.attributes.includes('试用版') }"
-                @click="toggleAttribute('试用版')"
-              >试用版</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.attributes.includes('个人原创') }"
-                @click="toggleAttribute('个人原创')"
-              >个人原创</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.attributes.includes('团队协作') }"
-                @click="toggleAttribute('团队协作')"
-              >团队协作</span>
-              <span 
-                class="tag" 
-                :class="{ selected: filters.attributes.includes('官方模板') }"
-                @click="toggleAttribute('官方模板')"
-              >官方模板</span>
-            </div>
-          </div>
-
-          <div class="btn-group">
-            <button class="filter-btn reset-btn" @click="resetFilters">重置筛选</button>
-            <button class="filter-btn apply-btn" @click="applyFilters">应用筛选</button>
           </div>
         </div>
       </div>
@@ -430,7 +469,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, reactive, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import WorkflowCard from '@/components/WorkflowCard.vue'
 import CompactCard from '@/components/CompactCard.vue'
@@ -439,6 +478,12 @@ import HotRecommendCard from '@/components/HotRecommendCard.vue'
 import { supabase } from '../supabase.js'
 
 const router = useRouter()
+
+// 滚动处理相关
+const handleScroll = () => {
+  // 使用CSS sticky，这里只是确保功能正常
+  // 如果需要，可以添加额外的JavaScript逻辑
+}
 
 // 加载状态
 const isLoading = ref(false)
@@ -950,6 +995,14 @@ onMounted(async () => {
   
   // 加载最新发布的数据
   loadLatestPosts()
+  
+  // 添加滚动监听
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+// 组件卸载时移除滚动监听
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 
 
@@ -1095,6 +1148,68 @@ const handleViewAllTopics = () => {
 const handlePublish = () => {
   console.log('点击发布按钮，跳转到编辑页面')
   router.push('/edit')
+}
+
+// 跳转到广场页面
+const goToCommunity = () => {
+  console.log('跳转到广场页面')
+  router.push('/community')
+}
+
+// 搭建平台数据
+const buildPlatforms = ref([
+  {
+    name: 'n8n',
+    url: 'https://app.n8n.cloud/',
+    desc: '开源自动化工作流平台'
+  },
+  {
+    name: 'Zapier',
+    url: 'https://zapier.com',
+    desc: '连接应用程序的自动化工具'
+  },
+  {
+    name: 'Make',
+    url: 'https://www.make.com',
+    desc: '强大的自动化集成平台'
+  },
+  {
+    name: '扣子（Coze）',
+    url: 'https://www.coze.cn',
+    desc: '字节跳动AI智能体平台'
+  },
+  {
+    name: 'IFTTT',
+    url: 'https://ifttt.com',
+    desc: '简单易用的自动化服务'
+  },
+  {
+    name: 'Power Automate',
+    url: 'https://powerautomate.microsoft.com',
+    desc: '微软自动化流程平台'
+  }
+])
+
+// 获取平台图标
+const getPlatformIcon = (url) => {
+  try {
+    const domain = new URL(url).hostname.replace('www.', '')
+    return `https://favicon.im/${domain}`
+  } catch (error) {
+    console.error('解析URL失败:', error)
+    return '/src/assets/default.jpg'
+  }
+}
+
+// 处理平台图标加载错误
+const handlePlatformIconError = (event, platform) => {
+  console.log('平台图标加载失败，使用默认图标:', platform.name)
+  event.target.src = '/src/assets/default.jpg'
+}
+
+// 打开平台网站
+const openPlatform = (url) => {
+  window.open(url, '_blank')
 }
 </script>
 

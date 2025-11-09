@@ -164,7 +164,35 @@
           </div>
         </div>
         
-
+        <!-- 智能体按钮（固定右侧） -->
+        <div class="ai-assistant-float-btn" @click="showAIModal = true">
+          <div class="bubble-tooltip">
+            你来描述，我帮你找！
+          </div>
+          <img :src="fatcatImg" alt="智能助手" class="ai-btn-icon">
+        </div>
+        
+        <!-- 智能体对话框气泡 -->
+        <div v-if="showAIModal" class="ai-chat-bubble">
+          <div class="ai-bubble-content">
+            <div class="ai-bubble-header">
+              <h3>智能助手</h3>
+              <button @click="showAIModal = false" class="ai-bubble-close-btn">×</button>
+            </div>
+            <div class="ai-bubble-body">
+              <iframe 
+                src="https://www.coze.cn/store/agent/7570328779717918746?bot_id=true&ui.header=false"
+                width="100%"
+                height="500px"
+                frameborder="0"
+                allow="fullscreen"
+                scrolling="auto"
+              ></iframe>
+            </div>
+          </div>
+          <!-- 气泡箭头指向按钮 -->
+          <div class="ai-bubble-arrow"></div>
+        </div>
 
       </div>
     </div>
@@ -179,9 +207,11 @@ import WebsiteShareSquare from '../components/WebsiteShareSquare.vue'
 import { getAllCategories } from '../utils/categoryData'
 import { supabase, updateSupabaseHeaders, validateUserId } from '../supabase.js'
 import { useAuthStore } from '../stores/auth.js'
+import fatcatImg from '../assets/fatcat.jpg'
 
 // 模态框显示状态
 const showAddLinkModal = ref(false)
+const showAIModal = ref(false)
 
 // 自定义导航链接
 const customLinks = ref([])
@@ -1066,6 +1096,249 @@ const handleIconError = (event, link) => {
 @media (max-width: 480px) {
   .website-share-section .website-share-square .main-container {
     padding: 10px;
+  }
+}
+
+/* 智能体浮动按钮样式 */
+.ai-assistant-float-btn {
+  position: fixed;
+  right: 30px;
+  bottom: 120px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  overflow: visible;
+}
+
+.ai-assistant-float-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.ai-btn-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+}
+
+/* 气泡提示样式 */
+.bubble-tooltip {
+  position: absolute;
+  right: 85px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #333;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
+.bubble-tooltip::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid #333;
+}
+
+.ai-assistant-float-btn:hover .bubble-tooltip {
+  opacity: 1;
+}
+
+/* 智能体对话框气泡样式 */
+.ai-chat-bubble {
+  position: fixed;
+  right: 110px;
+  bottom: 85px;
+  z-index: 1000;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ai-bubble-content {
+  background: #fff;
+  border-radius: 16px;
+  width: 400px;
+  max-height: 560px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.ai-bubble-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 16px 16px 0 0;
+}
+
+.ai-bubble-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #fff;
+}
+
+.ai-bubble-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  font-size: 20px;
+  color: #fff;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 50%;
+  transition: all 0.3s;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-bubble-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.ai-bubble-body {
+  padding: 0;
+  overflow: hidden;
+  flex: 1;
+  background: #fff;
+}
+
+.ai-bubble-body iframe {
+  width: 100%;
+  height: 480px;
+  border: none;
+  display: block;
+}
+
+/* 气泡箭头指向按钮 */
+.ai-bubble-arrow {
+  position: absolute;
+  right: -10px;
+  bottom: 35px;
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid #fff;
+  filter: drop-shadow(2px 0 3px rgba(0, 0, 0, 0.15));
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ai-assistant-float-btn {
+    width: 60px;
+    height: 60px;
+    right: 20px;
+    bottom: 100px;
+  }
+  
+  .bubble-tooltip {
+    right: 75px;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  
+  .ai-chat-bubble {
+    right: 85px;
+    bottom: 70px;
+  }
+  
+  .ai-bubble-content {
+    width: 340px;
+    max-height: 480px;
+  }
+  
+  .ai-bubble-body iframe {
+    height: 420px;
+  }
+  
+  .ai-bubble-arrow {
+    bottom: 28px;
+    right: -8px;
+    border-left-width: 8px;
+    border-top-width: 8px;
+    border-bottom-width: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-assistant-float-btn {
+    width: 50px;
+    height: 50px;
+    right: 15px;
+    bottom: 80px;
+  }
+  
+  .bubble-tooltip {
+    right: 65px;
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+  
+  .ai-chat-bubble {
+    right: 70px;
+    bottom: 60px;
+  }
+  
+  .ai-bubble-content {
+    width: 280px;
+    max-height: 420px;
+  }
+  
+  .ai-bubble-body iframe {
+    height: 380px;
+  }
+  
+  .ai-bubble-arrow {
+    bottom: 22px;
+    right: -8px;
+    border-left-width: 8px;
+    border-top-width: 8px;
+    border-bottom-width: 8px;
   }
 }
 </style>

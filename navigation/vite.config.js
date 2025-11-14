@@ -30,6 +30,6 @@ export default defineConfig({
       }
     }
   },
-  // 确保使用正确的base路径
-  base: './'
+  // 确保使用正确的base路径（Netlify部署使用绝对路径）
+  base: '/'
 })

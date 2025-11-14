@@ -1,5 +1,5 @@
 import './assets/main.css'
-import '@iconscout/unicons/css/line.css'
+// import '@iconscout/unicons/css/line.css' // 部署时有问题，改为CDN
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

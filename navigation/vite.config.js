@@ -17,4 +17,19 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    // 解决Netlify部署的模块解析问题
+    rollupOptions: {
+      external: ['vue', 'pinia', 'vue-router'],
+      output: {
+        globals: {
+          vue: 'Vue',
+          pinia: 'Pinia',
+          'vue-router': 'VueRouter'
+        }
+      }
+    }
+  },
+  // 确保使用正确的base路径
+  base: './'
 })

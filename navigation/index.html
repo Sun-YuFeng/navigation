@@ -9,6 +9,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <!-- Unicons 图标库（CDN方式解决Netlify部署问题） -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@iconscout/unicons@4.0.10/css/line.css">
+    <!-- Import Map for Vue module resolution -->
+    <script type="importmap">
+      {
+        "imports": {
+          "vue": "./node_modules/vue/dist/vue.esm-bundler.js",
+          "pinia": "./node_modules/pinia/dist/pinia.esm-browser.js",
+          "vue-router": "./node_modules/vue-router/dist/vue-router.esm-browser.js"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

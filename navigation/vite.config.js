@@ -13,7 +13,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      'vue': 'vue/dist/vue.esm-bundler.js'
+      'vue': fileURLToPath(new URL('./node_modules/vue/dist/vue.esm-bundler.js', import.meta.url)),
+      'pinia': fileURLToPath(new URL('./node_modules/pinia/dist/pinia.esm-browser.js', import.meta.url)),
+      'vue-router': fileURLToPath(new URL('./node_modules/vue-router/dist/vue-router.esm-browser.js', import.meta.url))
     },
   },
   build: {
